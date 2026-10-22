@@ -1,0 +1,1172 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="description" content="Prototipo navegable de Respira, sistema de telerrehabilitación pulmonar.">
+<title>Respira Telerrehab</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:wght@400;700&family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700&family=IBM+Plex+Mono:wght@500&display=swap">
+<style>
+/* Layout: barra lateral por rol + área de trabajo. El portal del paciente usa letra grande y una sola acción principal por tarjeta. */
+:root{
+  --bg:#eef3f4; --surface:#ffffff; --surface-2:#e4ecee; --fg:#11272c; --muted:#56696e; --line:#d2dee1;
+  --accent:#0a6e80; --accent-ink:#ffffff; --accent-soft:#d3ecf0;
+  --ok:#257a45; --ok-soft:#dcefe2; --warn:#94600f; --warn-soft:#f6ead2; --crit:#b63a26; --crit-soft:#f7dfd9;
+  --c1:#0a6e80; --c2:#3a5fb0; --c3:#a0660d; --c4:#7a4fa6; --c5:#2f7d5b;
+  --c1s:#d9eff3; --c2s:#e0e7f6; --c3s:#f6ecd9; --c4s:#ece3f5; --c5s:#dcefe6;
+  --shadow:0 1px 2px rgba(17,39,44,.06), 0 6px 20px rgba(17,39,44,.06);
+  --scrim:rgba(10,30,34,.45);
+  --f-display:'Bricolage Grotesque','Segoe UI',system-ui,sans-serif;
+  --f-body:'Atkinson Hyperlegible','Segoe UI',system-ui,sans-serif;
+  --f-mono:'IBM Plex Mono',ui-monospace,Consolas,monospace;
+  --r:12px;
+}
+@media (prefers-color-scheme: dark){ :root:not([data-theme="light"]){
+  --bg:#0b1618; --surface:#122125; --surface-2:#182c31; --fg:#e2edef; --muted:#93a8ad; --line:#263c41;
+  --accent:#4cbccf; --accent-ink:#04252b; --accent-soft:#103a42;
+  --ok:#5cc184; --ok-soft:#173a26; --warn:#e3ad52; --warn-soft:#3b2d14; --crit:#f07c66; --crit-soft:#432019;
+  --c1:#4cbccf; --c2:#86a5ec; --c3:#e3ad52; --c4:#b996e0; --c5:#6cc79a;
+  --c1s:#12343b; --c2s:#1d2a45; --c3s:#3a2e15; --c4s:#2e2440; --c5s:#163a2b;
+  --shadow:0 1px 2px rgba(0,0,0,.35); --scrim:rgba(0,0,0,.6); color-scheme:dark;
+}}
+:root[data-theme="dark"]{
+  --bg:#0b1618; --surface:#122125; --surface-2:#182c31; --fg:#e2edef; --muted:#93a8ad; --line:#263c41;
+  --accent:#4cbccf; --accent-ink:#04252b; --accent-soft:#103a42;
+  --ok:#5cc184; --ok-soft:#173a26; --warn:#e3ad52; --warn-soft:#3b2d14; --crit:#f07c66; --crit-soft:#432019;
+  --c1:#4cbccf; --c2:#86a5ec; --c3:#e3ad52; --c4:#b996e0; --c5:#6cc79a;
+  --c1s:#12343b; --c2s:#1d2a45; --c3s:#3a2e15; --c4s:#2e2440; --c5s:#163a2b;
+  --shadow:0 1px 2px rgba(0,0,0,.35); --scrim:rgba(0,0,0,.6); color-scheme:dark;
+}
+*{box-sizing:border-box}
+html,body{height:100%}
+body{margin:0}
+img{max-width:100%}
+[hidden]{display:none!important}
+body{background:var(--bg);color:var(--fg);font-family:var(--f-body);font-size:15px;line-height:1.5}
+h1,h2,h3{font-family:var(--f-display);font-weight:700;line-height:1.15;margin:0;text-wrap:balance;letter-spacing:-.01em}
+h1{font-size:1.75rem} h2{font-size:1.2rem} h3{font-size:1.02rem}
+p{margin:0}
+.mono,.num{font-family:var(--f-mono);font-variant-numeric:tabular-nums}
+.muted{color:var(--muted)}
+.eyebrow{font-size:.72rem;letter-spacing:.09em;text-transform:uppercase;color:var(--muted);font-weight:700}
+a{color:var(--accent)}
+button,input,select,textarea{font:inherit;color:inherit}
+:focus-visible{outline:3px solid var(--accent);outline-offset:2px;border-radius:6px}
+
+/* Estructura */
+.app{display:grid;grid-template-columns:248px minmax(0,1fr);min-height:100%}
+.side{background:var(--surface);border-right:1px solid var(--line);padding:20px 14px;display:flex;flex-direction:column;gap:20px;position:sticky;top:0;height:100vh}
+.brand{display:flex;align-items:center;gap:10px;padding:0 6px}
+.brand b{font-family:var(--f-display);font-size:1.25rem;letter-spacing:-.02em}
+.brand small{display:block;color:var(--muted);font-size:.72rem;line-height:1.2}
+.who{display:flex;gap:10px;align-items:center;padding:10px;background:var(--surface-2);border-radius:var(--r)}
+.avatar{width:38px;height:38px;border-radius:50%;display:grid;place-items:center;background:var(--accent);color:var(--accent-ink);font-weight:700;flex:none;font-size:.9rem}
+.who strong{display:block;font-size:.92rem;line-height:1.2}
+.who span{font-size:.78rem;color:var(--muted)}
+.nav{display:flex;flex-direction:column;gap:2px}
+.nav button{all:unset;cursor:pointer;padding:10px 12px;border-radius:9px;font-weight:700;color:var(--muted);display:flex;align-items:center;gap:10px}
+.nav button:hover{background:var(--surface-2);color:var(--fg)}
+.nav button[aria-current="page"]{background:var(--accent-soft);color:var(--accent)}
+.nav button:focus-visible{outline:3px solid var(--accent)}
+.nav .badge{margin-left:auto;background:var(--crit);color:#fff;border-radius:99px;font-size:.7rem;padding:1px 7px}
+.side-foot{margin-top:auto;display:flex;flex-direction:column;gap:8px;font-size:.78rem;color:var(--muted)}
+
+.top{position:sticky;top:env(safe-area-inset-top,0px);z-index:20;background:color-mix(in srgb,var(--bg) 88%,transparent);backdrop-filter:blur(8px);border-bottom:1px solid var(--line);padding-block:10px;padding-left:max(24px,env(safe-area-inset-left,0px));padding-right:max(24px,env(safe-area-inset-right,0px));display:flex;align-items:center;gap:14px;flex-wrap:wrap}
+body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset-top,0px);z-index:30;background:var(--bg)}
+.top .demo-tag{font-size:.75rem;font-weight:700;color:var(--warn);background:var(--warn-soft);padding:3px 9px;border-radius:99px;white-space:nowrap}
+.seg{display:inline-flex;background:var(--surface-2);border-radius:10px;padding:3px;gap:2px;flex-wrap:wrap}
+.seg button{all:unset;cursor:pointer;padding:6px 12px;border-radius:8px;font-weight:700;font-size:.85rem;color:var(--muted)}
+.seg button[aria-pressed="true"]{background:var(--surface);color:var(--fg);box-shadow:var(--shadow)}
+.seg button:focus-visible{outline:3px solid var(--accent)}
+.main{padding-block:24px 64px;padding-left:max(24px,env(safe-area-inset-left,0px));padding-right:max(24px,env(safe-area-inset-right,0px));display:flex;flex-direction:column;gap:20px;max-width:1180px;width:100%}
+.main.big{font-size:17px;max-width:980px}
+.page-head{display:flex;justify-content:space-between;align-items:flex-end;gap:12px;flex-wrap:wrap}
+.page-head p{color:var(--muted);margin-top:4px}
+
+/* Componentes */
+.card{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);padding:18px;box-shadow:var(--shadow);min-width:0}
+.card-head{display:flex;justify-content:space-between;align-items:center;gap:10px;margin-bottom:14px;flex-wrap:wrap}
+.grid{display:grid;gap:16px}
+.g2{grid-template-columns:repeat(2,minmax(0,1fr))}
+.g3{grid-template-columns:repeat(3,minmax(0,1fr))}
+.g4{grid-template-columns:repeat(4,minmax(0,1fr))}
+.g-hero{grid-template-columns:minmax(0,1.35fr) minmax(0,1fr)}
+.stack{display:flex;flex-direction:column;gap:12px}
+.row{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+.spacer{flex:1}
+
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;border:1px solid var(--line);background:var(--surface);color:var(--fg);border-radius:10px;padding:9px 14px;font-weight:700;cursor:pointer;text-decoration:none;line-height:1.2;min-height:40px}
+.btn:hover{border-color:var(--accent);color:var(--accent)}
+.btn-primary{background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}
+.btn-primary:hover{filter:brightness(1.08);color:var(--accent-ink)}
+.btn-danger{color:var(--crit)} .btn-danger:hover{border-color:var(--crit);color:var(--crit)}
+.btn-sm{padding:5px 10px;font-size:.82rem;min-height:32px;border-radius:8px}
+.btn-xl{padding:16px 22px;font-size:1.12rem;min-height:58px;border-radius:14px;width:100%}
+.btn[disabled]{opacity:.5;cursor:not-allowed;filter:grayscale(.6)}
+.btn svg{width:18px;height:18px;flex:none}
+.btn-xl svg{width:24px;height:24px}
+
+.chip{display:inline-flex;align-items:center;gap:5px;font-size:.76rem;font-weight:700;padding:2px 9px;border-radius:99px;background:var(--surface-2);color:var(--muted);white-space:nowrap}
+.chip.ok{background:var(--ok-soft);color:var(--ok)}
+.chip.warn{background:var(--warn-soft);color:var(--warn)}
+.chip.crit{background:var(--crit-soft);color:var(--crit)}
+.chip.info{background:var(--accent-soft);color:var(--accent)}
+.dot{width:8px;height:8px;border-radius:50%;background:currentColor;display:inline-block}
+
+.kpi{display:flex;flex-direction:column;gap:4px}
+.kpi .v{font-family:var(--f-mono);font-size:1.7rem;line-height:1.1;font-variant-numeric:tabular-nums}
+.kpi .v small{font-size:.9rem;color:var(--muted);margin-left:2px}
+.kpi .d{font-size:.8rem}
+.up{color:var(--ok)} .down{color:var(--crit)}
+
+.tbl-wrap{overflow-x:auto;margin:0 -4px}
+table.tbl{width:100%;border-collapse:collapse;font-size:.88rem}
+.tbl th{text-align:left;font-size:.72rem;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);padding:8px;border-bottom:1px solid var(--line);white-space:nowrap}
+.tbl td{padding:10px 8px;border-bottom:1px solid var(--line);vertical-align:middle}
+.tbl tr:last-child td{border-bottom:0}
+.tbl td.num{text-align:right;white-space:nowrap}
+.tbl tr.click{cursor:pointer} .tbl tr.click:hover td{background:var(--surface-2)}
+
+.field{display:flex;flex-direction:column;gap:5px;min-width:0}
+.field label,.field .lbl{font-size:.8rem;font-weight:700;color:var(--muted)}
+.field input,.field select,.field textarea{background:var(--surface);border:1px solid var(--line);border-radius:9px;padding:9px 11px;min-height:42px;width:100%}
+.field textarea{min-height:84px;resize:vertical}
+.field input:focus,.field select:focus,.field textarea:focus{outline:2px solid var(--accent);border-color:var(--accent)}
+.field .hint{font-size:.75rem;color:var(--muted)}
+.form-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px}
+.err{background:var(--crit-soft);color:var(--crit);padding:10px 12px;border-radius:9px;font-weight:700;font-size:.88rem}
+.okbox{background:var(--ok-soft);color:var(--ok);padding:12px 14px;border-radius:10px}
+.note-box{background:var(--surface-2);border-radius:10px;padding:12px 14px;font-size:.88rem;color:var(--muted)}
+.check{display:flex;gap:8px;align-items:center;font-size:.88rem;cursor:pointer}
+.check input{width:18px;height:18px;accent-color:var(--accent)}
+
+.radio-cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:8px}
+.radio-cards label{border:1.5px solid var(--line);border-radius:10px;padding:10px 12px;cursor:pointer;display:flex;gap:8px;align-items:flex-start;font-size:.9rem}
+.radio-cards input{accent-color:var(--accent);margin-top:3px}
+.radio-cards label:has(input:checked){border-color:var(--accent);background:var(--accent-soft)}
+.radio-cards small{display:block;color:var(--muted);font-size:.76rem}
+
+/* Paciente */
+.hello{display:flex;justify-content:space-between;gap:16px;flex-wrap:wrap;align-items:flex-end}
+.hello h1{font-size:2.1rem}
+.adh{display:flex;flex-direction:column;gap:6px;min-width:220px}
+.bar{height:10px;background:var(--surface-2);border-radius:99px;overflow:hidden}
+.bar i{display:block;height:100%;background:var(--accent);border-radius:99px}
+.hero-turno{display:flex;flex-direction:column;gap:16px;padding:22px}
+.hero-turno.is-virtual{border-color:color-mix(in srgb,var(--accent) 45%,var(--line))}
+.ht-row{display:flex;gap:18px;align-items:center;flex-wrap:wrap}
+.ht-date{display:flex;flex-direction:column;padding:12px 16px;background:var(--accent-soft);border-radius:12px;color:var(--accent);min-width:118px}
+.ht-day{font-weight:700;text-transform:capitalize}
+.ht-time{font-size:1.9rem;line-height:1.1}
+.ht-info{display:flex;flex-direction:column;gap:4px;align-items:flex-start}
+.ht-info strong{font-size:1.15rem}
+.ht-hint{color:var(--muted);text-align:center;font-size:.92rem}
+.ht-hint.live{color:var(--ok);font-weight:700}
+.vitals{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
+.vital{background:var(--surface-2);border-radius:12px;padding:14px}
+.vital .v{font-family:var(--f-mono);font-size:2rem;line-height:1.1}
+.vital .v small{font-size:1rem;color:var(--muted)}
+.safety{display:flex;gap:12px;align-items:flex-start;background:var(--warn-soft);color:var(--fg);border-radius:12px;padding:14px 16px}
+.safety svg{color:var(--warn);flex:none;width:26px;height:26px}
+
+.exlist{display:flex;flex-direction:column;gap:10px}
+.ex{display:flex;gap:14px;align-items:center;padding:12px;border:1px solid var(--line);border-radius:12px;background:var(--surface);flex-wrap:wrap}
+.ex.done{background:var(--surface-2)}
+.ex-body{flex:1;min-width:180px;display:flex;flex-direction:column;gap:3px}
+.ex-body strong{font-size:1.02em}
+.ex-actions{display:flex;gap:8px;flex-wrap:wrap}
+.thumb{width:84px;height:64px;border-radius:10px;display:grid;place-items:center;flex:none;position:relative;overflow:hidden}
+.thumb svg{width:34px;height:34px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+.thumb .len{position:absolute;right:5px;bottom:4px;font-size:.66rem;font-family:var(--f-mono);background:var(--surface);color:var(--fg);padding:0 5px;border-radius:5px}
+.done-tag{display:inline-flex;gap:6px;align-items:center;color:var(--ok);font-weight:700}
+.done-tag svg{width:20px;height:20px}
+
+/* Biblioteca */
+.lib{display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:14px}
+.lib .card{display:flex;flex-direction:column;gap:10px;padding:14px}
+.lib .thumb{width:100%;height:110px}
+.lib .thumb svg{width:46px;height:46px}
+.filters{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
+.filters .field{flex-direction:row;align-items:center}
+.filters input{min-width:200px}
+
+/* Ficha */
+.ficha-head{display:flex;gap:16px;align-items:center;flex-wrap:wrap}
+.ficha-head .avatar{width:56px;height:56px;font-size:1.2rem}
+.tabs{display:flex;gap:4px;border-bottom:1px solid var(--line);overflow-x:auto}
+.tabs button{all:unset;cursor:pointer;padding:10px 14px;font-weight:700;color:var(--muted);border-bottom:3px solid transparent;white-space:nowrap}
+.tabs button[aria-selected="true"]{color:var(--accent);border-color:var(--accent)}
+.tabs button:focus-visible{outline:3px solid var(--accent)}
+.thread{display:flex;flex-direction:column;gap:12px}
+.note{border:1px solid var(--line);border-radius:12px;padding:12px 14px;background:var(--surface);display:flex;flex-direction:column;gap:6px}
+.note.kine{border-left:4px solid var(--c2)} .note.med{border-left:4px solid var(--c1)}
+.note .meta{display:flex;gap:8px;align-items:center;flex-wrap:wrap;font-size:.8rem;color:var(--muted)}
+.note .meta strong{color:var(--fg)}
+.replies{margin-left:22px;display:flex;flex-direction:column;gap:10px;border-left:2px dashed var(--line);padding-left:14px}
+.tl{display:flex;flex-direction:column;gap:0}
+.tl-item{display:grid;grid-template-columns:76px 18px minmax(0,1fr);gap:10px;padding-bottom:14px}
+.tl-item .when{font-size:.78rem;color:var(--muted);text-align:right;padding-top:2px}
+.tl-item .pin{width:12px;height:12px;border-radius:50%;background:var(--accent);margin-top:5px;box-shadow:0 0 0 4px var(--accent-soft)}
+
+/* Agenda */
+.agenda{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px}
+.slot{display:grid;grid-template-columns:64px minmax(0,1fr);gap:12px;padding:12px 0;border-bottom:1px solid var(--line)}
+.slot:last-child{border-bottom:0}
+.slot .t{font-family:var(--f-mono);font-size:1.02rem;padding-top:2px}
+.slot .t small{display:block;font-size:.72rem;color:var(--muted)}
+.slot-body{display:flex;flex-direction:column;gap:6px;min-width:0}
+.slot-body .row{gap:6px}
+.meet-line{display:flex;gap:6px;align-items:center;font-family:var(--f-mono);font-size:.8rem;color:var(--muted);word-break:break-all}
+
+/* Charts */
+.chart svg{width:100%;height:auto;display:block}
+.legend{display:flex;gap:14px;flex-wrap:wrap;font-size:.78rem;color:var(--muted);margin-top:6px}
+.legend i{display:inline-block;width:12px;height:3px;border-radius:2px;margin-right:6px;vertical-align:middle}
+.weeks{display:flex;gap:10px;align-items:flex-end;height:120px;padding-top:8px}
+.weeks div{flex:1;display:flex;flex-direction:column;align-items:center;gap:6px;height:100%;justify-content:flex-end;font-size:.75rem;color:var(--muted)}
+.weeks b{display:block;width:100%;max-width:56px;background:var(--accent);border-radius:6px 6px 2px 2px}
+.weeks span.num{color:var(--fg)}
+
+/* Modal y toast */
+.modal-back{position:fixed;inset:0;background:var(--scrim);z-index:50;display:grid;place-items:center;padding:16px;overflow-y:auto}
+.modal{background:var(--surface);border-radius:16px;width:min(620px,100%);max-height:calc(100vh - 32px);overflow-y:auto;box-shadow:0 20px 60px rgba(0,0,0,.3);display:flex;flex-direction:column}
+.modal.wide{width:min(820px,100%)}
+.modal-head{display:flex;justify-content:space-between;align-items:flex-start;gap:12px;padding:18px 20px 10px}
+.modal-body{padding:6px 20px 20px;display:flex;flex-direction:column;gap:14px}
+.modal-foot{display:flex;gap:10px;justify-content:flex-end;padding:12px 20px 18px;border-top:1px solid var(--line);flex-wrap:wrap}
+.x{all:unset;cursor:pointer;width:34px;height:34px;display:grid;place-items:center;border-radius:8px;color:var(--muted);flex:none}
+.x:hover{background:var(--surface-2)}
+.x:focus-visible{outline:3px solid var(--accent)}
+.toast{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(20px + env(safe-area-inset-bottom,0px));background:var(--fg);color:var(--bg);padding:12px 18px;border-radius:12px;font-weight:700;z-index:60;box-shadow:0 10px 30px rgba(0,0,0,.25);max-width:calc(100% - 32px)}
+
+/* Reproductor */
+.player{background:var(--surface-2);border-radius:14px;padding:22px;display:flex;flex-direction:column;align-items:center;gap:16px}
+.orb-wrap{width:220px;height:220px;display:grid;place-items:center;max-width:100%}
+.orb{width:120px;height:120px;border-radius:50%;background:radial-gradient(circle at 35% 30%,color-mix(in srgb,var(--accent) 35%,var(--surface)),var(--accent));box-shadow:0 0 0 18px var(--accent-soft);transform:scale(.85);transition-property:transform;transition-timing-function:ease-in-out}
+.phase{font-family:var(--f-display);font-size:1.4rem;font-weight:700;text-align:center;min-height:2.2em}
+.count{font-family:var(--f-mono);font-size:1rem;color:var(--muted)}
+.steps{margin:0;padding-left:20px;display:flex;flex-direction:column;gap:4px;font-size:.92rem}
+.borg{display:grid;grid-template-columns:repeat(auto-fill,minmax(82px,1fr));gap:6px}
+.borg label{border:1.5px solid var(--line);border-radius:10px;padding:8px 6px;text-align:center;cursor:pointer;display:flex;flex-direction:column;gap:2px}
+.borg label b{font-family:var(--f-mono);font-size:1.15rem}
+.borg label span{font-size:.7rem;color:var(--muted);line-height:1.15}
+.borg input{position:absolute;opacity:0;pointer-events:none}
+.borg label:has(input:checked){border-color:var(--accent);background:var(--accent-soft)}
+.borg label.hi:has(input:checked){border-color:var(--crit);background:var(--crit-soft)}
+.borg label:has(input:focus-visible){outline:3px solid var(--accent)}
+
+.guide{display:flex;gap:14px;align-items:flex-start;background:var(--accent-soft);border-radius:var(--r);padding:14px 16px}
+.guide ul{margin:6px 0 0;padding-left:18px;display:flex;flex-direction:column;gap:3px;font-size:.9rem}
+.guide .x{margin-left:auto}
+
+.empty{text-align:center;color:var(--muted);padding:28px}
+
+@media (max-width:980px){
+  .g4{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .g3{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .g-hero{grid-template-columns:minmax(0,1fr)}
+}
+@media (max-width:860px){
+  .app{grid-template-columns:minmax(0,1fr)}
+  .side{position:static;height:auto;border-right:0;border-bottom:1px solid var(--line);padding:12px max(16px,env(safe-area-inset-left,0px)) 10px max(16px,env(safe-area-inset-right,0px));gap:10px}
+  .side .who,.side-foot .hide-sm{display:none}
+  .nav{flex-direction:row;overflow-x:auto;gap:4px}
+  .nav button{white-space:nowrap;padding:8px 12px}
+  .side-foot{margin-top:0;flex-direction:row;align-items:center}
+  .agenda,.g2{grid-template-columns:minmax(0,1fr)}
+  .top,.main{padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+}
+@media (max-width:520px){
+  .g4,.g3{grid-template-columns:minmax(0,1fr)}
+  .hello h1{font-size:1.7rem}
+  .top .demo-tag{display:none}
+  .tl-item{grid-template-columns:58px 14px minmax(0,1fr)}
+}
+@media (prefers-reduced-motion:reduce){ .orb{transition:none!important} }
+</style>
+</head>
+<body>
+<div id="app"></div>
+
+<script>
+/* ============ Utilidades ============ */
+const KEY = 'respira-demo-v2';
+const DAY = 864e5, MIN = 6e4;
+const DIAS = ['domingo','lunes','martes','miércoles','jueves','viernes','sábado'];
+const MESES = ['ene','feb','mar','abr','may','jun','jul','ago','sep','oct','nov','dic'];
+const uid = () => Math.random().toString(36).slice(2, 10);
+const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const pad = n => String(n).padStart(2, '0');
+function at(dayOff, h, m){ const d = new Date(); d.setDate(d.getDate() + dayOff); d.setHours(h, m, 0, 0); return d.toISOString(); }
+const fmtHora = d => `${pad(d.getHours())}:${pad(d.getMinutes())}`;
+const fmtFecha = d => `${d.getDate()} ${MESES[d.getMonth()]}`;
+const fmtFechaLarga = d => `${DIAS[d.getDay()]} ${d.getDate()} de ${MESES[d.getMonth()]}`;
+const sameDay = (a, b) => a.toDateString() === b.toDateString();
+function diaRel(d){
+  const t = new Date(); const m = new Date(); m.setDate(t.getDate() + 1); const y = new Date(); y.setDate(t.getDate() - 1);
+  if (sameDay(d, t)) return 'Hoy'; if (sameDay(d, m)) return 'Mañana'; if (sameDay(d, y)) return 'Ayer';
+  return `${DIAS[d.getDay()]} ${fmtFecha(d)}`;
+}
+const fmtNum = (v, dec = 0) => v == null || v === '' ? '—' : Number(v).toLocaleString('es-AR', {minimumFractionDigits: dec, maximumFractionDigits: dec});
+function edad(nac){ const b = new Date(nac + 'T12:00'); const t = new Date(); let a = t.getFullYear() - b.getFullYear(); if (t < new Date(t.getFullYear(), b.getMonth(), b.getDate())) a--; return a; }
+function meetCode(){ const L = 'abcdefghijkmnopqrstuvwxyz'; const r = n => Array.from({length: n}, () => L[Math.floor(Math.random() * L.length)]).join(''); return `meet.google.com/${r(3)}-${r(4)}-${r(3)}`; }
+const initials = (n, a) => (n[0] + (a ? a[0] : '')).toUpperCase();
+
+const ICONS = {
+  video: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2.5" y="6" width="13" height="12" rx="2.5"/><path d="M15.5 10.5 21 7v10l-5.5-3.5"/></svg>',
+  play: '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M8 5.5v13a1 1 0 0 0 1.5.86l10.5-6.5a1 1 0 0 0 0-1.72L9.5 4.64A1 1 0 0 0 8 5.5z"/></svg>',
+  check: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9.5"/><path d="m7.5 12.5 3 3 6-6.5"/></svg>',
+  alert: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.3 3.9 1.9 18a2 2 0 0 0 1.7 3h16.8a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z"/><path d="M12 9v4M12 17h.01"/></svg>',
+  plus: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>',
+  x: '<svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M6 6l12 12M18 6 6 18"/></svg>',
+  copy: '<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="12" height="12" rx="2"/><path d="M5 15V5a2 2 0 0 1 2-2h10"/></svg>',
+  left: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="m15 6-6 6 6 6"/></svg>',
+  right: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="m9 6 6 6-6 6"/></svg>',
+  pause: '<svg viewBox="0 0 24 24" fill="currentColor"><rect x="6" y="5" width="4" height="14" rx="1"/><rect x="14" y="5" width="4" height="14" rx="1"/></svg>',
+  ext: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 4h6v6M20 4l-9 9M18 14v5a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1h5"/></svg>',
+  lungs: '<svg viewBox="0 0 32 32" width="34" height="34" fill="none"><path d="M16 4v10" stroke="var(--accent)" stroke-width="2.4" stroke-linecap="round"/><path d="M16 13c-2-1-4-4-7-4-3.5 0-5 6-5 11 0 5 2 7 5 7s5-2 6-5c.6-2 1-6 1-9z" fill="var(--accent)"/><path d="M16 13c2-1 4-4 7-4 3.5 0 5 6 5 11 0 5-2 7-5 7s-5-2-6-5c-.6-2-1-6-1-9z" fill="var(--accent)" opacity=".55"/></svg>'
+};
+
+const CATS = {
+  'Respiratorio': {c: 'var(--c1)', s: 'var(--c1s)', g: '<path d="M3 14c3-4 6-4 9 0s6 4 9 0"/><path d="M3 9c3-4 6-4 9 0s6 4 9 0"/>'},
+  'Movilidad':    {c: 'var(--c2)', s: 'var(--c2s)', g: '<circle cx="12" cy="4.5" r="2"/><path d="M12 8v7M5 5l7 5 7-5M8.5 21l3.5-6 3.5 6"/>'},
+  'Fuerza':       {c: 'var(--c4)', s: 'var(--c4s)', g: '<path d="M6.5 7v10M17.5 7v10M3 9.5v5M21 9.5v5M6.5 12h11"/>'},
+  'Aeróbico':     {c: 'var(--c3)', s: 'var(--c3s)', g: '<path d="M3 17h3l3-8 4 12 3-8h5"/>'},
+  'Relajación':   {c: 'var(--c5)', s: 'var(--c5s)', g: '<circle cx="12" cy="12" r="8"/><path d="M8 13.5c1.2 1.5 2.5 2 4 2s2.8-.5 4-2M9 9.5h.01M15 9.5h.01"/>'}
+};
+const thumb = (e, extra = '') => { const c = CATS[e.cat]; return `<div class="thumb" style="background:${c.s};color:${c.c}" aria-hidden="true"><svg viewBox="0 0 24 24">${c.g}</svg>${extra}</div>`; };
+const durTxt = s => s >= 60 ? `${Math.round(s / 60)} min` : `${s} s`;
+
+const BORG = [[0,'Nada'],[0.5,'Muy, muy leve'],[1,'Muy leve'],[2,'Leve'],[3,'Moderada'],[4,'Algo intensa'],[5,'Intensa'],[6,''],[7,'Muy intensa'],[8,''],[9,'Muy, muy intensa'],[10,'Máxima']];
+const CIE = {'J44.9':'EPOC','J84.1':'Fibrosis pulmonar','U09.9':'Secuela post-COVID','J45.5':'Asma grave persistente','J47':'Bronquiectasias'};
+
+/* ============ Datos de ejemplo ============ */
+const PATTERNS = {
+  diaf:   [{k:'in', t:'Inhalá por la nariz inflando la panza', s:4}, {k:'out', t:'Exhalá despacio desinflando la panza', s:6}],
+  labios: [{k:'in', t:'Inhalá por la nariz', s:2}, {k:'out', t:'Exhalá con labios fruncidos, como soplando una vela', s:4}],
+  costal: [{k:'in', t:'Inhalá empujando las manos con las costillas', s:4}, {k:'hold', t:'Sostené', s:2}, {k:'out', t:'Exhalá lento', s:5}],
+  huff:   [{k:'in', t:'Inhalá a medio pulmón', s:3}, {k:'hold', t:'Sostené', s:2}, {k:'out', t:'Soplá fuerte con boca abierta: "ja"', s:2}],
+  brazos: [{k:'in', t:'Subí el bastón inhalando', s:3}, {k:'out', t:'Bajalo exhalando con labios fruncidos', s:4}],
+  tronco: [{k:'in', t:'Inhalá al centro', s:3}, {k:'out', t:'Girá el tronco exhalando', s:4}],
+  silla:  [{k:'in', t:'Inhalá sentado', s:2}, {k:'out', t:'Parate exhalando', s:3}, {k:'hold', t:'Sentate despacio', s:3}],
+  remo:   [{k:'in', t:'Inhalá con los brazos extendidos', s:2}, {k:'out', t:'Tirá de la banda exhalando', s:3}],
+  marcha: [{k:'in', t:'Marchá a ritmo cómodo', s:4}, {k:'out', t:'Seguí, respirando por la nariz', s:4}],
+  bici:   [{k:'in', t:'Pedaleá suave', s:5}, {k:'out', t:'Intervalo: subí la cadencia', s:5}],
+  relax:  [{k:'in', t:'Subí los hombros inhalando', s:3}, {k:'out', t:'Soltalos exhalando largo', s:6}]
+};
+
+function seed(){
+  const profesionales = [
+    {id:'pr1', titulo:'Dra.', nombre:'Laura', apellido:'Benítez', esp:'Neumonología', mat:'MN 112.458', cal:'lbenitez@centrorespira.com.ar'},
+    {id:'pr2', titulo:'Lic.', nombre:'Martín', apellido:'Pérez', esp:'Kinesiología', mat:'MN 54.210', cal:'mperez@centrorespira.com.ar'}
+  ];
+  const pacientes = [
+    {id:'p1', nombre:'María', apellido:'Gómez', dni:'14.567.890', nac:'1959-03-14', sexo:'F', email:'maria.gomez@mail.com', tel:'11 5823-4410', os:'OSDE 210', afil:'60-12457893-01', dx:'J44.9', o2:false, portal:'Activo'},
+    {id:'p2', nombre:'Jorge', apellido:'Álvarez', dni:'22.104.335', nac:'1968-07-02', sexo:'M', email:'jorge.alvarez@mail.com', tel:'11 4470-1192', os:'Swiss Medical SMG20', afil:'80-00913477', dx:'U09.9', o2:false, portal:'Activo'},
+    {id:'p3', nombre:'Elena', apellido:'Ruiz', dni:'10.982.114', nac:'1953-11-27', sexo:'F', email:'elena.ruiz@mail.com', tel:'11 3391-0287', os:'PAMI', afil:'15-0982114-3/00', dx:'J44.9', o2:true, portal:'Activo'},
+    {id:'p4', nombre:'Ricardo', apellido:'Sosa', dni:'29.877.640', nac:'1981-05-19', sexo:'M', email:'ricardo.sosa@mail.com', tel:'11 6012-7745', os:'Galeno Oro', afil:'2209877640', dx:'J45.5', o2:false, portal:'Invitación enviada'},
+    {id:'p5', nombre:'Carmen', apellido:'Díaz', dni:'17.340.552', nac:'1963-01-08', sexo:'F', email:'carmen.diaz@mail.com', tel:'11 5120-3368', os:'IOMA', afil:'1734055201', dx:'J47', o2:false, portal:'Activo'}
+  ];
+  const ejercicios = [
+    {id:'e1', titulo:'Respiración diafragmática', cat:'Respiratorio', nivel:'Inicial', dur:240, pat:'diaf', contra:'', pasos:['Acostado o sentado, una mano en el pecho y otra en la panza.','Inhalá por la nariz: solo se mueve la mano de la panza.','Exhalá lento, el doble de tiempo que la inhalación.']},
+    {id:'e2', titulo:'Respiración con labios fruncidos', cat:'Respiratorio', nivel:'Inicial', dur:300, pat:'labios', contra:'', pasos:['Relajá cuello y hombros.','Inhalá por la nariz contando hasta 2.','Exhalá con los labios fruncidos contando hasta 4.']},
+    {id:'e3', titulo:'Expansión costal con manos', cat:'Respiratorio', nivel:'Intermedio', dur:240, pat:'costal', contra:'Fractura costal reciente', pasos:['Apoyá las manos a los costados de las costillas.','Inhalá llevando el aire hacia las manos.','Sostené 2 segundos y exhalá lento.']},
+    {id:'e4', titulo:'Huffing (tos controlada)', cat:'Respiratorio', nivel:'Intermedio', dur:180, pat:'huff', contra:'Hemoptisis reciente', pasos:['Sentado, con la espalda derecha.','Inhalá a medio pulmón y sostené.','Soplá fuerte con la boca abierta, como empañando un vidrio.']},
+    {id:'e5', titulo:'Elevación de brazos con bastón', cat:'Movilidad', nivel:'Inicial', dur:300, pat:'brazos', contra:'Dolor agudo de hombro', pasos:['Tomá el bastón con ambas manos a la altura de la cadera.','Subilo por encima de la cabeza inhalando.','Bajalo exhalando con labios fruncidos.']},
+    {id:'e6', titulo:'Rotación de tronco sentado', cat:'Movilidad', nivel:'Inicial', dur:240, pat:'tronco', contra:'', pasos:['Sentado, brazos cruzados sobre el pecho.','Girá el tronco hacia un lado exhalando.','Volvé al centro inhalando.']},
+    {id:'e7', titulo:'Sentarse y pararse de la silla', cat:'Fuerza', nivel:'Inicial', dur:240, pat:'silla', contra:'Hipotensión ortostática', pasos:['Silla firme apoyada contra la pared.','Parate sin usar las manos, exhalando.','Sentate despacio, controlando el movimiento.']},
+    {id:'e8', titulo:'Remo con banda elástica', cat:'Fuerza', nivel:'Intermedio', dur:300, pat:'remo', contra:'', pasos:['Banda fija a la altura del pecho.','Tirá llevando los codos hacia atrás, exhalando.','Volvé lento inhalando.']},
+    {id:'e9', titulo:'Marcha en el lugar', cat:'Aeróbico', nivel:'Inicial', dur:600, pat:'marcha', contra:'', pasos:['Cerca de una pared o silla para apoyarte.','Marchá levantando las rodillas a ritmo cómodo.','Si el Borg supera 5, bajá el ritmo.']},
+    {id:'e10', titulo:'Bicicleta fija por intervalos', cat:'Aeróbico', nivel:'Avanzado', dur:900, pat:'bici', contra:'SpO₂ en reposo menor a 88%', pasos:['3 minutos de entrada en calor suave.','Alterná 1 minuto rápido y 2 minutos suaves.','Controlá la saturación al terminar.']},
+    {id:'e11', titulo:'Relajación de hombros y cuello', cat:'Relajación', nivel:'Inicial', dur:240, pat:'relax', contra:'', pasos:['Sentado, con los pies apoyados.','Subí los hombros hacia las orejas inhalando.','Soltalos de golpe exhalando largo.']}
+  ];
+  const planes = [
+    {id:'pl1', pac:'p1', pro:'pr1', inicio:at(-17,9,0), fin:at(39,9,0), obj:'Mejorar la tolerancia al esfuerzo (TM6M +50 m) y reducir la disnea en actividades diarias a Borg ≤ 3.', ses:3, spo2:88, fc:130, estado:'Activo'},
+    {id:'pl2', pac:'p2', pro:'pr1', inicio:at(-30,9,0), fin:at(26,9,0), obj:'Recuperar capacidad aeróbica tras internación por COVID-19.', ses:3, spo2:90, fc:140, estado:'Activo'},
+    {id:'pl3', pac:'p3', pro:'pr1', inicio:at(-45,9,0), fin:at(39,9,0), obj:'Mantener funcionalidad y técnica de ahorro energético con oxígeno domiciliario.', ses:2, spo2:88, fc:120, estado:'Activo'},
+    {id:'pl4', pac:'p4', pro:'pr1', inicio:at(-1,9,0), fin:at(55,9,0), obj:'Mejorar control del asma y técnica respiratoria; reentrenamiento al esfuerzo progresivo.', ses:3, spo2:92, fc:150, estado:'Activo'},
+    {id:'pl5', pac:'p5', pro:'pr1', inicio:at(-20,9,0), fin:at(36,9,0), obj:'Higiene bronquial diaria y fortalecimiento de miembros inferiores.', ses:3, spo2:90, fc:135, estado:'Activo'}
+  ];
+  let o = 0;
+  const A = (plan, ej, series, reps, durSeg, veces, ind) => ({id:uid(), plan, ej, series, reps, durSeg, veces, ind, orden:o++, activo:true, pro:'pr2', desde:at(-14,9,0)});
+  const asignados = [
+    A('pl1','e1',3,10,null,7,'Antes del desayuno.'),
+    A('pl1','e2',null,null,300,7,'Usala también al subir escaleras.'),
+    A('pl1','e5',2,12,null,3,''),
+    A('pl1','e7',3,8,null,3,'Silla contra la pared. Si te mareás, pará.'),
+    A('pl1','e9',null,null,600,5,'Ritmo en el que puedas hablar en frases cortas.'),
+    A('pl2','e2',null,null,300,7,''), A('pl2','e9',null,null,900,5,''), A('pl2','e8',3,12,null,3,''),
+    A('pl3','e1',3,8,null,7,'Con oxígeno a 2 L/min.'), A('pl3','e11',null,null,240,7,''),
+    A('pl5','e4',3,3,null,7,'Después de la nebulización.'), A('pl5','e7',3,10,null,3,'')
+  ];
+  const registros = [];
+  const p1a = asignados.filter(a => a.plan === 'pl1');
+  for (let d = 1; d <= 14; d++) p1a.forEach((a, i) => {
+    if ((d + i) % 7 < a.veces - (d % 5 === 0 ? 1 : 0)) registros.push({id:uid(), pac:'p1', asig:a.id, fecha:at(-d, 9 + i, 15), ok:true, borg:2 + ((d + i) % 3) * 0.5, spo2:90 + ((d * 3 + i) % 4), com:'', alerta:false, revisada:false});
+  });
+  const p2a = asignados.filter(a => a.plan === 'pl2'), p3a = asignados.filter(a => a.plan === 'pl3'), p5a = asignados.filter(a => a.plan === 'pl5');
+  for (let d = 2; d <= 10; d += 2){ registros.push({id:uid(), pac:'p2', asig:p2a[d % 3].id, fecha:at(-d,18,0), ok:true, borg:3, spo2:93, com:'', alerta:false, revisada:false}); }
+  for (let d = 1; d <= 9; d += 3){ registros.push({id:uid(), pac:'p5', asig:p5a[d % 2].id, fecha:at(-d,10,30), ok:true, borg:2, spo2:95, com:'', alerta:false, revisada:false}); }
+  registros.push({id:uid(), pac:'p3', asig:p3a[0].id, fecha:at(-1,11,20), ok:true, borg:5, spo2:86, com:'Me costó más que otros días.', alerta:true, revisada:false});
+  registros.push({id:uid(), pac:'p2', asig:p2a[1].id, fecha:at(-1,19,5), ok:false, borg:7, spo2:91, com:'Tuve que parar a los 6 minutos.', alerta:true, revisada:false});
+
+  const evaluaciones = [];
+  const E = (pac, d, v) => evaluaciones.push({id:uid(), pac, pro:'pr1', fecha:at(-d,10,0), ...v});
+  [[56,90,85,96,22,5,3,1.38,55,2.61,80,310],[35,91,87,92,20,4,3,1.42,57,2.63,81,338],[14,93,88,88,19,3.5,2,1.47,59,2.66,82,362],[3,94,90,84,18,3,2,1.52,61,2.70,83,391]]
+    .forEach(r => E('p1', r[0], {spo2r:r[1], spo2e:r[2], fc:r[3], fr:r[4], borg:r[5], mmrc:r[6], fev1:r[7], fev1p:r[8], fvc:r[9], fvcp:r[10], tm6m:r[11], cie:'J44.9', obs:''}));
+  evaluaciones[evaluaciones.length - 1].obs = 'Mejora sostenida. Progresar a nivel intermedio en aeróbico.';
+  E('p2', 30, {spo2r:94, spo2e:89, fc:98, fr:20, borg:5, mmrc:2, fev1:2.61, fev1p:78, fvc:3.05, fvcp:74, tm6m:402, cie:'U09.9', obs:'Patrón restrictivo leve.'});
+  E('p2', 9, {spo2r:96, spo2e:92, fc:88, fr:17, borg:3, mmrc:1, fev1:2.80, fev1p:83, fvc:3.30, fvcp:80, tm6m:455, cie:'U09.9', obs:''});
+  E('p3', 45, {spo2r:88, spo2e:82, fc:102, fr:24, borg:6, mmrc:3, fev1:0.82, fev1p:38, fvc:1.85, fvcp:72, tm6m:228, cie:'J44.9', obs:'O₂ domiciliario 2 L/min. GOLD 3.'});
+  E('p3', 12, {spo2r:89, spo2e:84, fc:98, fr:22, borg:5, mmrc:3, fev1:0.85, fev1p:40, fvc:1.88, fvcp:73, tm6m:245, cie:'J44.9', obs:''});
+  E('p4', 1, {spo2r:96, spo2e:93, fc:82, fr:16, borg:2, mmrc:1, fev1:2.70, fev1p:72, fvc:4.10, fvcp:91, tm6m:520, cie:'J45.5', obs:'Inicia plan. Derivo a kinesiología.'});
+  E('p5', 20, {spo2r:95, spo2e:91, fc:86, fr:18, borg:3, mmrc:2, fev1:1.95, fev1p:76, fvc:2.85, fvcp:88, tm6m:430, cie:'J47', obs:''});
+
+  const notas = [];
+  const N = (pac, autor, d, tipo, texto, padre = null, visible = false) => { const n = {id:uid(), pac, autor, padre, tipo, texto, visible, fecha:at(-d, 12, 30)}; notas.push(n); return n.id; };
+  const n1 = N('p1','pr1',14,'Médica','EPOC GOLD 2 con buena respuesta. SpO₂ en reposo 93%. Indico progresar la carga aeróbica; mantener umbral de seguridad en 88%.');
+  N('p1','pr2',12,'Kinésica','Recibido. Incorporo marcha en el lugar 10 min y sentarse-pararse 3×8. Buena técnica de labios fruncidos.', n1);
+  const n3 = N('p1','pr2',4,'Kinésica','Borg post-sesión 3/10, sin desaturación por debajo de 90%. Sugiero evaluar aumento de intensidad.');
+  N('p1','pr1',3,'Médica','De acuerdo. TM6M de hoy 391 m (+81 m desde el ingreso). Avanzar a nivel intermedio en aeróbico.', n3);
+  N('p1','pr2',2,'Kinésica','¡Muy bien, María! Esta semana vas a notar que la marcha te cuesta menos. Seguí registrando cómo te sentís después de cada ejercicio.', null, true);
+  N('p3','pr2',1,'Interconsulta','Desaturó a 86% en domicilio durante diafragmática. ¿Ajustamos flujo de O₂ durante el ejercicio?');
+  N('p4','pr1',1,'Médica','Asma grave persistente, control parcial. Derivo para reentrenamiento respiratorio. Umbral SpO₂ 92%.');
+
+  const T = (pac, pro, inicio, dur, mod, motivo) => {
+    const past = new Date(inicio).getTime() + dur * MIN < Date.now();
+    return {id:uid(), pac, pro, inicio, dur, mod, estado: past ? 'Atendido' : 'Confirmado', motivo, meet: mod === 'Virtual' ? meetCode() : null};
+  };
+  const soon = new Date(Date.now() + 6 * MIN); soon.setSeconds(0, 0);
+  const turnos = [
+    {id:'t-demo', pac:'p1', pro:'pr2', inicio:soon.toISOString(), dur:40, mod:'Virtual', estado:'Confirmado', motivo:'Sesión de telerrehabilitación', meet:'meet.google.com/rsp-kqtw-mzn'},
+    T('p1','pr2',at(3,16,30),40,'Virtual','Sesión de telerrehabilitación'),
+    T('p1','pr1',at(7,10,0),30,'Presencial','Control con espirometría'),
+    T('p1','pr2',at(-4,16,30),40,'Virtual','Sesión de telerrehabilitación'),
+    T('p1','pr1',at(-3,10,0),30,'Presencial','Evaluación pulmonar + TM6M'),
+    T('p1','pr2',at(-11,16,30),40,'Presencial','Sesión en gimnasio'),
+    T('p2','pr1',at(0,9,0),30,'Presencial','Control'),
+    T('p3','pr1',at(0,11,30),30,'Virtual','Seguimiento de saturación'),
+    T('p5','pr1',at(0,15,0),30,'Presencial','Espirometría de control'),
+    T('p4','pr1',at(0,18,0),30,'Virtual','Revisión del plan'),
+    T('p2','pr2',at(0,10,0),40,'Presencial','Sesión en gimnasio'),
+    T('p3','pr2',at(0,13,0),40,'Virtual','Telerrehabilitación'),
+    T('p5','pr2',at(0,19,0),40,'Virtual','Telerrehabilitación'),
+    T('p4','pr2',at(1,9,30),40,'Presencial','Primera sesión kinésica'),
+    T('p2','pr1',at(1,11,0),30,'Virtual','Resultados de laboratorio'),
+    T('p3','pr2',at(2,13,0),40,'Virtual','Telerrehabilitación')
+  ];
+  turnos[3].estado = 'Atendido'; turnos[5].estado = 'Ausente';
+  return {v:2, seededOn:new Date().toDateString(), role:'paciente', profesionales, pacientes, ejercicios, planes, asignados, registros, evaluaciones, notas, turnos};
+}
+
+/* ============ Estado ============ */
+let S;
+try { S = JSON.parse(localStorage.getItem(KEY)); } catch(e) { S = null; }
+if (!S || S.v !== 2 || S.seededOn !== new Date().toDateString()) S = seed();
+// El turno de demostración siempre empieza en unos minutos para poder probar el botón de Meet.
+(() => { const t = S.turnos.find(x => x.id === 't-demo'); if (t){ const s = new Date(Date.now() + 6 * MIN); s.setSeconds(0, 0); t.inicio = s.toISOString(); if (t.estado === 'Cancelado') t.estado = 'Confirmado'; } })();
+const ROLE_FROM_HASH = location.hash.replace('#', '');
+if (['paciente','neumonologa','kinesiologo','recepcion'].includes(ROLE_FROM_HASH)) S.role = ROLE_FROM_HASH;
+function save(){ try { localStorage.setItem(KEY, JSON.stringify(S)); } catch(e) {} }
+
+const ui = {
+  view: {paciente:'inicio', neumonologa:'agenda', kinesiologo:'bandeja', recepcion:'agenda'},
+  ficha: 'p1', fichaTab: 'resumen', modal: null, toast: null, dayOff: 0,
+  lib: {cat:'Todas', nivel:'', q:''}, guideHidden: {}, turnoResult: null
+};
+
+const pac = id => S.pacientes.find(p => p.id === id);
+const pro = id => S.profesionales.find(p => p.id === id);
+const ejer = id => S.ejercicios.find(e => e.id === id);
+const nombre = p => `${p.nombre} ${p.apellido}`;
+const proNombre = p => `${p.titulo} ${p.nombre} ${p.apellido}`;
+const planDe = pid => S.planes.filter(p => p.pac === pid && p.estado !== 'Finalizado').sort((a, b) => b.inicio.localeCompare(a.inicio))[0];
+const asigDe = pid => { const pl = planDe(pid); return pl ? S.asignados.filter(a => a.plan === pl.id && a.activo).sort((a, b) => a.orden - b.orden) : []; };
+const evalsDe = pid => S.evaluaciones.filter(e => e.pac === pid).sort((a, b) => a.fecha.localeCompare(b.fecha));
+const regsDe = pid => S.registros.filter(r => r.pac === pid).sort((a, b) => b.fecha.localeCompare(a.fecha));
+const notasDe = pid => S.notas.filter(n => n.pac === pid);
+const alertas = () => S.registros.filter(r => r.alerta && !r.revisada).sort((a, b) => b.fecha.localeCompare(a.fecha));
+const ME = {paciente:'p1', neumonologa:'pr1', kinesiologo:'pr2'};
+
+function adherencia(pid){
+  const as = asigDe(pid); const esperado = as.reduce((s, a) => s + a.veces, 0);
+  const hecho = regsDe(pid).filter(r => r.ok && Date.now() - new Date(r.fecha) < 7 * DAY).length;
+  return esperado ? Math.min(100, Math.round(hecho / esperado * 100)) : 0;
+}
+function adherenciaSemanas(pid, n = 4){
+  const as = asigDe(pid); const esperado = as.reduce((s, a) => s + a.veces, 0) || 1; const regs = regsDe(pid).filter(r => r.ok);
+  return Array.from({length: n}, (_, i) => {
+    const hasta = Date.now() - i * 7 * DAY, desde = hasta - 7 * DAY;
+    const c = regs.filter(r => { const t = new Date(r.fecha).getTime(); return t > desde && t <= hasta; }).length;
+    return {label: i === 0 ? 'Esta sem.' : `Hace ${i}`, pct: Math.min(100, Math.round(c / esperado * 100))};
+  }).reverse();
+}
+function gold(e){
+  if (!e || !e.fev1 || !e.fvc) return null;
+  const ratio = e.fev1 / e.fvc;
+  if (ratio >= 0.7) return {txt:'Sin obstrucción', cls:'ok'};
+  const p = e.fev1p;
+  if (p >= 80) return {txt:'GOLD 1 · leve', cls:'ok'};
+  if (p >= 50) return {txt:'GOLD 2 · moderada', cls:'warn'};
+  if (p >= 30) return {txt:'GOLD 3 · grave', cls:'crit'};
+  return {txt:'GOLD 4 · muy grave', cls:'crit'};
+}
+function canJoin(t){
+  if (t.mod !== 'Virtual' || !t.meet || ['Cancelado','Atendido','Ausente'].includes(t.estado)) return false;
+  const s = new Date(t.inicio).getTime(), e = s + t.dur * MIN, n = Date.now();
+  return n >= s - 10 * MIN && n <= e + 30 * MIN;
+}
+function joinState(t){
+  const s = new Date(t.inicio).getTime(); const diff = Math.round((s - Date.now()) / MIN);
+  if (canJoin(t)) return {ok:true, msg: diff > 0 ? `Empieza en ${diff} min. Ya podés entrar a la sala.` : 'La sesión está en curso.'};
+  if (diff > 0){ const h = Math.floor(diff / 60); return {ok:false, msg:`El botón se habilita 10 minutos antes (faltan ${h ? h + ' h ' : ''}${diff % 60} min).`}; }
+  return {ok:false, msg:'La sesión finalizó.'};
+}
+function proximoTurno(pid){
+  return S.turnos.filter(t => t.pac === pid && !['Cancelado','Atendido','Ausente'].includes(t.estado) && new Date(t.inicio).getTime() + (t.dur + 30) * MIN > Date.now())
+    .sort((a, b) => a.inicio.localeCompare(b.inicio))[0];
+}
+const estadoChip = e => `<span class="chip ${({Confirmado:'info', Programado:'info', Atendido:'ok', Ausente:'warn', Cancelado:'crit', 'Cancelación solicitada':'warn'})[e] || ''}">${esc(e)}</span>`;
+const modChip = m => m === 'Virtual' ? `<span class="chip info">Virtual</span>` : `<span class="chip">Presencial</span>`;
+
+/* ============ Gráficos ============ */
+function lineChart({labels, series, min, max, unit = '', threshold, thresholdLabel, h = 190}){
+  const W = 560, H = h, pl = 40, pr = 52, pt = 14, pb = 28, n = labels.length;
+  const x = i => pl + (n > 1 ? i * (W - pl - pr) / (n - 1) : (W - pl - pr) / 2);
+  const y = v => pt + (max - v) / (max - min) * (H - pt - pb);
+  let g = '';
+  for (let k = 0; k <= 4; k++){ const v = min + (max - min) * k / 4; const yy = y(v);
+    g += `<line x1="${pl}" x2="${W - pr}" y1="${yy}" y2="${yy}" stroke="var(--line)" stroke-width="1"/><text x="${pl - 8}" y="${yy + 4}" text-anchor="end" font-size="11" fill="var(--muted)" font-family="var(--f-mono)">${fmtNum(v, (max - min) < 8 ? 1 : 0)}</text>`; }
+  labels.forEach((l, i) => { if (n <= 8 || i % Math.ceil(n / 8) === 0 || i === n - 1) g += `<text x="${x(i)}" y="${H - 8}" text-anchor="middle" font-size="11" fill="var(--muted)">${esc(l)}</text>`; });
+  if (threshold != null){ const yy = y(threshold); g += `<line x1="${pl}" x2="${W - pr}" y1="${yy}" y2="${yy}" stroke="var(--crit)" stroke-dasharray="5 4" stroke-width="1.5"/><text x="${W - pr + 6}" y="${yy + 4}" font-size="11" fill="var(--crit)">${esc(thresholdLabel || '')}</text>`; }
+  series.forEach((s, si) => {
+    const pts = s.values.map((v, i) => v == null ? null : [x(i), y(v)]).filter(Boolean);
+    if (!pts.length) return;
+    const d = pts.map((p, i) => (i ? 'L' : 'M') + p[0].toFixed(1) + ' ' + p[1].toFixed(1)).join(' ');
+    if (si === 0 && pts.length > 1) g += `<path d="${d} L${pts[pts.length - 1][0]} ${H - pb} L${pts[0][0]} ${H - pb} Z" fill="${s.color}" opacity=".10"/>`;
+    g += `<path d="${d}" fill="none" stroke="${s.color}" stroke-width="2.5" stroke-linejoin="round" stroke-linecap="round" ${s.dash ? 'stroke-dasharray="6 4"' : ''}/>`;
+    pts.forEach((p, i) => { const last = i === pts.length - 1; g += `<circle cx="${p[0]}" cy="${p[1]}" r="${last ? 5 : 3}" fill="${last ? s.color : 'var(--surface)'}" stroke="${s.color}" stroke-width="2"/>`; });
+    const lp = pts[pts.length - 1], lv = s.values.filter(v => v != null).slice(-1)[0];
+    g += `<text x="${lp[0] + 9}" y="${lp[1] + 4}" font-size="12" font-weight="700" fill="${s.color}" font-family="var(--f-mono)">${fmtNum(lv, Number.isInteger(lv) ? 0 : 1)}${esc(unit)}</text>`;
+  });
+  const legend = series.length > 1 ? `<div class="legend">${series.map(s => `<span><i style="background:${s.color}"></i>${esc(s.name)}</span>`).join('')}</div>` : '';
+  return `<div class="chart"><svg viewBox="0 0 ${W} ${H}" role="img" aria-label="${esc(series.map(s => s.name).join(', '))}">${g}</svg>${legend}</div>`;
+}
+
+/* ============ Shell ============ */
+const ROLES = {
+  paciente:    {label:'Paciente', nav:[['inicio','Inicio'],['ejercicios','Mis ejercicios'],['turnos','Mis turnos'],['evolucion','Mi evolución']]},
+  neumonologa: {label:'Neumonóloga', nav:[['agenda','Agenda de hoy'],['pacientes','Pacientes']]},
+  kinesiologo: {label:'Kinesiólogo', nav:[['bandeja','Bandeja'],['pacientes','Pacientes'],['biblioteca','Biblioteca de ejercicios']]},
+  recepcion:   {label:'Recepción', nav:[['agenda','Agenda'],['nuevo-turno','Nuevo turno'],['pacientes','Pacientes']]}
+};
+const GUIDES = {
+  paciente: ['El botón <b>Unirme a la videollamada</b> se habilita 10 minutos antes del turno (el de hoy ya está activo).','Tocá <b>Ver video</b> en un ejercicio y después <b>Lo hice</b> para registrar cómo te sentiste.','Probá registrar una saturación de <b>86%</b>: aparece el aviso de seguridad y una alerta en la bandeja del kinesiólogo.'],
+  neumonologa: ['Abrí la ficha de <b>María Gómez</b> y mirá su evolución de SpO₂ y test de marcha.','Cargá una <b>nueva evaluación</b>: el sistema calcula FEV1/FVC y la clasificación GOLD.','Editá el <b>plan de tratamiento</b> y respondé una nota del kinesiólogo.'],
+  kinesiologo: ['Revisá las <b>alertas</b> de pacientes que desaturaron o reportaron Borg alto.','<b>Ricardo Sosa</b> tiene un plan nuevo sin rutina: asignale ejercicios desde la biblioteca.','Filtrá la biblioteca por categoría y mirá la vista previa de un ejercicio.'],
+  recepcion: ['Creá un <b>turno virtual</b>: se genera el evento en Google Calendar con su enlace de Meet.','Marcá turnos como atendidos o ausentes desde la agenda.','Recepción ve datos de contacto y cobertura, pero no la historia clínica.']
+};
+function who(){
+  if (S.role === 'paciente'){ const p = pac('p1'); return {ini:initials(p.nombre, p.apellido), name:nombre(p), sub:'Paciente · ' + p.os}; }
+  if (S.role === 'recepcion') return {ini:'SR', name:'Sofía Ramos', sub:'Recepción'};
+  const p = pro(ME[S.role]); return {ini:initials(p.nombre, p.apellido), name:proNombre(p), sub:`${p.esp} · ${p.mat}`};
+}
+
+function render(){
+  const a = document.activeElement; const fid = a && a.id; const sel = a && a.selectionStart;
+  const r = ROLES[S.role], v = ui.view[S.role], w = who();
+  const navKey = v === 'ficha' ? 'pacientes' : v;
+  const nAlert = alertas().length;
+  document.getElementById('app').innerHTML = `
+  <div class="app">
+    <aside class="side">
+      <div class="brand">${ICONS.lungs}<div><b>Respira</b><small>Centro de rehabilitación pulmonar</small></div></div>
+      <div class="who"><div class="avatar">${w.ini}</div><div><strong>${esc(w.name)}</strong><span>${esc(w.sub)}</span></div></div>
+      <nav class="nav" aria-label="Secciones">
+        ${r.nav.map(([k, l]) => `<button data-act="nav" data-v="${k}" ${navKey === k ? 'aria-current="page"' : ''}>${l}${k === 'bandeja' && nAlert ? `<span class="badge">${nAlert}</span>` : ''}</button>`).join('')}
+      </nav>
+      <div class="side-foot">
+        <button class="btn btn-sm" data-act="reset">Reiniciar demo</button>
+        <span class="hide-sm">Prototipo con datos de ejemplo. Los cambios quedan solo en este navegador.</span>
+      </div>
+    </aside>
+    <div style="min-width:0">
+      <header class="top">
+        <span class="demo-tag">Demo</span>
+        <span class="muted" style="font-size:.85rem">Ver como:</span>
+        <div class="seg" role="group" aria-label="Elegir rol">
+          ${Object.entries(ROLES).map(([k, x]) => `<button data-act="role" data-r="${k}" aria-pressed="${S.role === k}">${x.label}</button>`).join('')}
+        </div>
+      </header>
+      <main class="main ${S.role === 'paciente' ? 'big' : ''}">
+        ${ui.guideHidden[S.role] ? '' : `<div class="guide"><div><strong>Qué probar en esta vista</strong><ul>${GUIDES[S.role].map(g => `<li>${g}</li>`).join('')}</ul></div><button class="x" data-act="hideGuide" aria-label="Ocultar guía">${ICONS.x}</button></div>`}
+        ${VIEWS[S.role][v]()}
+      </main>
+    </div>
+  </div>
+  ${ui.modal ? renderModal() : ''}
+  ${ui.toast ? `<div class="toast" role="status">${esc(ui.toast)}</div>` : ''}`;
+  if (fid){ const el = document.getElementById(fid); if (el){ el.focus(); try { if (sel != null) el.setSelectionRange(sel, sel); } catch(e) {} } }
+  if (ui.modal && ui.modal.type === 'player') playerTick(true);
+}
+function toast(msg){ ui.toast = msg; render(); clearTimeout(toast.t); toast.t = setTimeout(() => { ui.toast = null; render(); }, 3200); }
+function openModal(type, data = {}){ ui.modal = {type, ...data}; render(); setTimeout(() => { const f = document.querySelector('.modal input:not([type=hidden]):not([type=radio]), .modal select, .modal textarea, .modal .btn-primary'); if (f) f.focus(); }, 30); }
+function closeModal(){ stopPlayer(); ui.modal = null; render(); }
+
+/* ============ Vistas: paciente ============ */
+function turnoHero(t){
+  if (!t) return `<section class="card hero-turno"><div class="eyebrow">Próximo turno</div><p class="muted">No tenés turnos programados. Recepción te va a contactar para agendar el próximo.</p></section>`;
+  const p = pro(t.pro), d = new Date(t.inicio), v = t.mod === 'Virtual', j = joinState(t);
+  return `<section class="card hero-turno ${v ? 'is-virtual' : ''}">
+    <div class="eyebrow">Próximo turno</div>
+    <div class="ht-row">
+      <div class="ht-date"><span class="ht-day">${diaRel(d)}</span><span class="ht-time mono">${fmtHora(d)}</span></div>
+      <div class="ht-info">${modChip(t.mod)}<strong>${esc(proNombre(p))}</strong><span class="muted">${p.esp} · ${t.dur} min · ${esc(t.motivo)}</span></div>
+    </div>
+    ${v ? `<button class="btn btn-primary btn-xl" data-act="join" data-id="${t.id}" ${j.ok ? '' : 'disabled'}>${ICONS.video} Unirme a la videollamada</button>
+      <p class="ht-hint ${j.ok ? 'live' : ''}" data-joinmsg="${t.id}">${j.msg}</p>`
+    : `<p>Sede Caballito · Consultorio 3<br><span class="muted">Llegá 10 minutos antes con tu DNI y la credencial de ${esc(pac(t.pac).os)}.</span></p>`}
+  </section>`;
+}
+function exItem(a, opts = {}){
+  const e = ejer(a.ej); const hoy = regsDe(ME.paciente).some(r => r.asig === a.id && sameDay(new Date(r.fecha), new Date()));
+  const presc = [a.series && a.reps ? `${a.series} series × ${a.reps}` : '', a.durSeg ? durTxt(a.durSeg) : '', a.veces === 7 ? 'todos los días' : `${a.veces} veces por semana`].filter(Boolean).join(' · ');
+  return `<div class="ex ${hoy && opts.today ? 'done' : ''}">
+    ${thumb(e, `<span class="len">${durTxt(e.dur)}</span>`)}
+    <div class="ex-body"><strong>${esc(e.titulo)}</strong><span class="muted">${presc}</span>${a.ind ? `<span style="font-size:.88em">${esc(a.ind)}</span>` : ''}</div>
+    <div class="ex-actions">
+      <button class="btn" data-act="play" data-id="${e.id}" data-asig="${a.id}">${ICONS.play} Ver video</button>
+      ${hoy && opts.today ? `<span class="done-tag">${ICONS.check} Hecho hoy</span>` : `<button class="btn btn-primary" data-act="registrar" data-asig="${a.id}">Lo hice</button>`}
+    </div>
+  </div>`;
+}
+const VIEWS = {paciente:{}, neumonologa:{}, kinesiologo:{}, recepcion:{}};
+VIEWS.paciente.inicio = () => {
+  const p = pac('p1'), plan = planDe(p.id), as = asigDe(p.id);
+  const sem = Math.floor((Date.now() - new Date(plan.inicio)) / (7 * DAY)) + 1, tot = Math.round((new Date(plan.fin) - new Date(plan.inicio)) / (7 * DAY));
+  const adh = adherencia(p.id), ev = evalsDe(p.id).slice(-1)[0], reg = regsDe(p.id)[0];
+  const hechos = as.filter(a => regsDe(p.id).some(r => r.asig === a.id && sameDay(new Date(r.fecha), new Date()))).length;
+  return `
+  <div class="hello">
+    <div><p class="muted" style="text-transform:capitalize">${fmtFechaLarga(new Date())}</p><h1>Hola, ${esc(p.nombre)}</h1></div>
+    <div class="adh"><div class="row" style="justify-content:space-between"><span>Semana <b>${sem}</b> de ${tot} de tu plan</span><span class="mono">${adh}%</span></div><div class="bar"><i style="width:${adh}%"></i></div><span class="muted" style="font-size:.85em">Ejercicios hechos esta semana</span></div>
+  </div>
+  <div class="grid g-hero">
+    ${turnoHero(proximoTurno(p.id))}
+    <section class="card stack">
+      <div class="eyebrow">Tus últimos valores</div>
+      <div class="vitals">
+        <div class="vital"><span class="muted">Saturación</span><div class="v">${reg?.spo2 ?? ev.spo2r}<small>%</small></div><span class="muted" style="font-size:.8em">${reg ? diaRel(new Date(reg.fecha)) + ', en casa' : 'En consultorio'}</span></div>
+        <div class="vital"><span class="muted">Falta de aire</span><div class="v">${fmtNum(reg?.borg ?? ev.borg, 1)}<small>/10</small></div><span class="muted" style="font-size:.8em">Escala de Borg</span></div>
+        <div class="vital"><span class="muted">Caminata 6 min</span><div class="v">${ev.tm6m}<small> m</small></div><span class="muted" style="font-size:.8em">+${ev.tm6m - evalsDe(p.id)[0].tm6m} m desde que empezaste</span></div>
+        <div class="vital"><span class="muted">Tu límite seguro</span><div class="v">${plan.spo2}<small>%</small></div><span class="muted" style="font-size:.8em">Si bajás de esto, pará</span></div>
+      </div>
+    </section>
+  </div>
+  <section class="card">
+    <div class="card-head"><h2>Tus ejercicios de hoy</h2><span class="chip ${hechos === as.length ? 'ok' : 'info'}">${hechos} de ${as.length} hechos</span></div>
+    <div class="exlist">${as.map(a => exItem(a, {today:true})).join('')}</div>
+  </section>
+  <div class="safety">${ICONS.alert}<div><strong>Pará y descansá si sentís mucha falta de aire</strong><p>Si tu saturación baja de ${plan.spo2}%, tenés dolor de pecho o mareo, sentate, usá la respiración con labios fruncidos y avisá al equipo. En una urgencia llamá al 107.</p></div></div>`;
+};
+VIEWS.paciente.ejercicios = () => {
+  const as = asigDe('p1'), plan = planDe('p1');
+  return `<div class="page-head"><div><h1>Mis ejercicios</h1><p>Rutina indicada por ${esc(proNombre(pro('pr2')))} dentro de tu plan de ${plan.ses} sesiones por semana.</p></div></div>
+  <section class="card"><div class="exlist">${as.map(a => exItem(a)).join('')}</div></section>`;
+};
+VIEWS.paciente.turnos = () => {
+  const ts = S.turnos.filter(t => t.pac === 'p1').sort((a, b) => a.inicio.localeCompare(b.inicio));
+  const prox = ts.filter(t => !['Atendido','Ausente','Cancelado'].includes(t.estado) && new Date(t.inicio).getTime() + (t.dur + 30) * MIN > Date.now());
+  const hist = ts.filter(t => !prox.includes(t)).reverse();
+  const item = (t, future) => { const d = new Date(t.inicio), p = pro(t.pro), j = joinState(t);
+    return `<div class="slot"><div class="t">${fmtHora(d)}<small>${diaRel(d)}</small></div><div class="slot-body">
+      <div class="row">${modChip(t.mod)} ${estadoChip(t.estado)}</div><strong>${esc(proNombre(p))} · ${p.esp}</strong><span class="muted">${esc(t.motivo)}</span>
+      ${future ? `<div class="row">${t.mod === 'Virtual' ? `<button class="btn btn-primary btn-sm" data-act="join" data-id="${t.id}" ${j.ok ? '' : 'disabled'}>${ICONS.video} Unirme</button>` : ''}
+        ${t.estado !== 'Cancelación solicitada' ? `<button class="btn btn-sm" data-act="pedirCancel" data-id="${t.id}">Pedir cancelación</button>` : ''}</div>
+        ${t.mod === 'Virtual' && !j.ok ? `<span class="muted" style="font-size:.85em">${j.msg}</span>` : ''}` : ''}
+    </div></div>`; };
+  return `<div class="page-head"><div><h1>Mis turnos</h1><p>Para reprogramar, pedí la cancelación y recepción te ofrece un nuevo horario.</p></div></div>
+  <div class="grid g2">
+    <section class="card"><div class="card-head"><h2>Próximos</h2></div>${prox.map(t => item(t, true)).join('') || '<p class="empty">Sin turnos próximos</p>'}</section>
+    <section class="card"><div class="card-head"><h2>Historial</h2></div>${hist.map(t => item(t, false)).join('') || '<p class="empty">Todavía no hay turnos pasados</p>'}</section>
+  </div>`;
+};
+VIEWS.paciente.evolucion = () => {
+  const ev = evalsDe('p1'), labels = ev.map(e => fmtFecha(new Date(e.fecha))), plan = planDe('p1');
+  const regs = regsDe('p1').slice(0, 14).reverse();
+  const visibles = notasDe('p1').filter(n => n.visible).sort((a, b) => b.fecha.localeCompare(a.fecha));
+  return `<div class="page-head"><div><h1>Mi evolución</h1><p>Mediciones tomadas en el consultorio y las que registrás en casa.</p></div></div>
+  <div class="grid g2">
+    <section class="card"><div class="card-head"><h2>Saturación en reposo</h2><span class="chip ok">Mejorando</span></div>${lineChart({labels, series:[{name:'SpO₂ en reposo', values:ev.map(e => e.spo2r), color:'var(--c1)'}], min:84, max:100, unit:'%', threshold:plan.spo2, thresholdLabel:'Límite'})}</section>
+    <section class="card"><div class="card-head"><h2>Caminata de 6 minutos</h2><span class="chip ok">+${ev[ev.length - 1].tm6m - ev[0].tm6m} m</span></div>${lineChart({labels, series:[{name:'Metros', values:ev.map(e => e.tm6m), color:'var(--c2)'}], min:250, max:450, unit:' m'})}</section>
+    <section class="card"><div class="card-head"><h2>Cómo te sentiste después de ejercitar</h2></div>${lineChart({labels:regs.map(r => fmtFecha(new Date(r.fecha))), series:[{name:'Borg (falta de aire)', values:regs.map(r => r.borg), color:'var(--c3)'}], min:0, max:10, unit:''})}<p class="muted" style="font-size:.85em">0 = nada de falta de aire · 10 = máxima</p></section>
+    <section class="card"><div class="card-head"><h2>Constancia semanal</h2></div><div class="weeks">${adherenciaSemanas('p1').map(w => `<div><span class="num">${w.pct}%</span><b style="height:${Math.max(4, w.pct)}%"></b><span>${w.label}</span></div>`).join('')}</div></section>
+  </div>
+  <section class="card"><div class="card-head"><h2>Mensajes de tu equipo</h2></div><div class="thread">${visibles.map(n => `<div class="note kine"><div class="meta"><strong>${esc(proNombre(pro(n.autor)))}</strong><span>${diaRel(new Date(n.fecha))}</span></div><p>${esc(n.texto)}</p></div>`).join('') || '<p class="empty">Sin mensajes</p>'}</div></section>`;
+};
+
+/* ============ Vistas: profesionales ============ */
+function agendaPro(proId){
+  const hoy = S.turnos.filter(t => t.pro === proId && sameDay(new Date(t.inicio), new Date())).sort((a, b) => a.inicio.localeCompare(b.inicio));
+  return hoy.map(t => { const d = new Date(t.inicio), p = pac(t.pac);
+    return `<div class="slot"><div class="t">${fmtHora(d)}<small>${t.dur} min</small></div><div class="slot-body">
+      <div class="row">${modChip(t.mod)} ${estadoChip(t.estado)}</div>
+      <strong>${esc(nombre(p))}</strong><span class="muted">${esc(t.motivo)} · ${CIE[p.dx]}</span>
+      <div class="row"><button class="btn btn-sm" data-act="ficha" data-id="${p.id}">Abrir ficha</button>
+      ${t.mod === 'Virtual' && !['Cancelado','Atendido','Ausente'].includes(t.estado) ? `<button class="btn btn-primary btn-sm" data-act="join" data-id="${t.id}">${ICONS.video} Iniciar videollamada</button>` : ''}</div>
+    </div></div>`; }).join('') || '<p class="empty">No hay turnos hoy</p>';
+}
+VIEWS.neumonologa.agenda = () => {
+  const hoy = S.turnos.filter(t => t.pro === 'pr1' && sameDay(new Date(t.inicio), new Date()));
+  return `<div class="page-head"><div><h1>Agenda de hoy</h1><p style="text-transform:capitalize">${fmtFechaLarga(new Date())}</p></div></div>
+  <div class="grid g4">
+    <div class="card kpi"><span class="eyebrow">Turnos hoy</span><span class="v">${hoy.length}</span><span class="d muted">${hoy.filter(t => t.mod === 'Virtual').length} virtuales</span></div>
+    <div class="card kpi"><span class="eyebrow">Pacientes en plan</span><span class="v">${S.planes.filter(p => p.estado === 'Activo').length}</span><span class="d muted">activos</span></div>
+    <div class="card kpi"><span class="eyebrow">Alertas domiciliarias</span><span class="v ${alertas().length ? 'down' : ''}">${alertas().length}</span><span class="d muted">sin revisar por kinesiología</span></div>
+    <div class="card kpi"><span class="eyebrow">Notas nuevas</span><span class="v">${S.notas.filter(n => n.autor === 'pr2' && Date.now() - new Date(n.fecha) < 3 * DAY).length}</span><span class="d muted">de kinesiología, últimos 3 días</span></div>
+  </div>
+  <section class="card"><div class="card-head"><h2>Turnos</h2></div>${agendaPro('pr1')}</section>`;
+};
+function pacientesTabla(){
+  return `<div class="tbl-wrap"><table class="tbl"><thead><tr><th>Paciente</th><th>Diagnóstico</th><th>SpO₂ reposo</th><th>Espirometría</th><th>Adherencia 7 d</th><th>Plan</th></tr></thead><tbody>
+  ${S.pacientes.map(p => { const e = evalsDe(p.id).slice(-1)[0], g = gold(e), pl = planDe(p.id), al = alertas().some(r => r.pac === p.id), sinRut = pl && !asigDe(p.id).length;
+    return `<tr class="click" data-act="ficha" data-id="${p.id}" tabindex="0"><td><strong>${esc(nombre(p))}</strong><br><span class="muted" style="font-size:.8rem">${edad(p.nac)} años · ${esc(p.os)}</span></td>
+      <td>${CIE[p.dx]}${p.o2 ? ' <span class="chip warn">O₂</span>' : ''}</td>
+      <td class="num">${e ? e.spo2r + '%' : '—'}</td><td>${g ? `<span class="chip ${g.cls}">${g.txt}</span>` : '—'}</td>
+      <td class="num">${pl ? adherencia(p.id) + '%' : '—'}</td>
+      <td>${pl ? (sinRut ? '<span class="chip warn">Sin rutina</span>' : '<span class="chip ok">Activo</span>') : '<span class="chip">Sin plan</span>'} ${al ? '<span class="chip crit"><span class="dot"></span>Alerta</span>' : ''}</td></tr>`; }).join('')}
+  </tbody></table></div>`;
+}
+VIEWS.neumonologa.pacientes = VIEWS.kinesiologo.pacientes = () => `<div class="page-head"><div><h1>Pacientes</h1><p>Tocá un paciente para abrir su historia clínica.</p></div></div><section class="card">${pacientesTabla()}</section>`;
+
+VIEWS.neumonologa.ficha = VIEWS.kinesiologo.ficha = () => {
+  const p = pac(ui.ficha), pl = planDe(p.id), e = evalsDe(p.id).slice(-1)[0], g = gold(e);
+  const tabs = [['resumen','Resumen'],['evaluaciones','Evaluaciones'],['plan','Plan de tratamiento'],['rutina','Rutina de ejercicios'],['notas','Notas de evolución']];
+  return `<div><button class="btn btn-sm" data-act="nav" data-v="pacientes">${ICONS.left} Pacientes</button></div>
+  <section class="card ficha-head">
+    <div class="avatar">${initials(p.nombre, p.apellido)}</div>
+    <div style="flex:1;min-width:200px"><h1>${esc(nombre(p))}</h1><p class="muted">${edad(p.nac)} años · DNI ${p.dni} · ${esc(p.os)} · ${p.tel}</p></div>
+    <div class="row"><span class="chip info">${p.dx} · ${CIE[p.dx]}</span>${g ? `<span class="chip ${g.cls}">${g.txt}</span>` : ''}${p.o2 ? '<span class="chip warn">O₂ domiciliario</span>' : ''}${pl ? `<span class="chip">Umbral SpO₂ ${pl.spo2}%</span>` : ''}</div>
+  </section>
+  <div class="tabs" role="tablist">${tabs.map(([k, l]) => `<button role="tab" aria-selected="${ui.fichaTab === k}" data-act="tab" data-t="${k}">${l}</button>`).join('')}</div>
+  ${FICHA[ui.fichaTab](p)}`;
+};
+const FICHA = {
+  resumen(p){
+    const ev = evalsDe(p.id), e = ev[ev.length - 1], f = ev[0], pl = planDe(p.id), labels = ev.map(x => fmtFecha(new Date(x.fecha)));
+    const regs = regsDe(p.id).slice(0, 8);
+    if (!e) return '<section class="card empty">Sin evaluaciones todavía.</section>';
+    const delta = (a, b, u, inv) => { const d = +(a - b).toFixed(2); if (!d || ev.length < 2) return '<span class="muted">Sin cambios</span>'; const good = inv ? d < 0 : d > 0; return `<span class="${good ? 'up' : 'down'}">${d > 0 ? '+' : ''}${fmtNum(d, Number.isInteger(d) ? 0 : 1)}${u} desde el ingreso</span>`; };
+    return `<div class="grid g4">
+      <div class="card kpi"><span class="eyebrow">SpO₂ reposo</span><span class="v">${e.spo2r}<small>%</small></span><span class="d">${delta(e.spo2r, f.spo2r, ' pts')}</span></div>
+      <div class="card kpi"><span class="eyebrow">TM6M</span><span class="v">${e.tm6m}<small>m</small></span><span class="d">${delta(e.tm6m, f.tm6m, ' m')}</span></div>
+      <div class="card kpi"><span class="eyebrow">FEV1</span><span class="v">${e.fev1p}<small>% pred.</small></span><span class="d">${delta(e.fev1p, f.fev1p, ' pts')}</span></div>
+      <div class="card kpi"><span class="eyebrow">Adherencia 7 días</span><span class="v">${pl ? adherencia(p.id) : 0}<small>%</small></span><span class="d muted">${asigDe(p.id).length} ejercicios asignados</span></div>
+    </div>
+    <div class="grid g2">
+      <section class="card"><div class="card-head"><h3>Saturación de oxígeno</h3></div>${lineChart({labels, series:[{name:'Reposo', values:ev.map(x => x.spo2r), color:'var(--c1)'}, {name:'Esfuerzo', values:ev.map(x => x.spo2e), color:'var(--c3)', dash:true}], min:80, max:100, unit:'%', threshold:pl?.spo2, thresholdLabel:'Umbral'})}</section>
+      <section class="card"><div class="card-head"><h3>Test de marcha de 6 minutos</h3></div>${lineChart({labels, series:[{name:'Distancia', values:ev.map(x => x.tm6m), color:'var(--c2)'}], min:Math.floor((Math.min(...ev.map(x => x.tm6m)) - 40) / 50) * 50, max:Math.ceil((Math.max(...ev.map(x => x.tm6m)) + 40) / 50) * 50, unit:' m'})}</section>
+    </div>
+    <section class="card"><div class="card-head"><h3>Registros domiciliarios recientes</h3><span class="muted" style="font-size:.85rem">Cargados por el paciente desde el portal</span></div>
+      ${regs.length ? `<div class="tbl-wrap"><table class="tbl"><thead><tr><th>Fecha</th><th>Ejercicio</th><th>Completó</th><th>Borg</th><th>SpO₂</th><th>Comentario</th></tr></thead><tbody>
+      ${regs.map(r => { const a = S.asignados.find(x => x.id === r.asig), ej = a && ejer(a.ej); return `<tr><td>${diaRel(new Date(r.fecha))} ${fmtHora(new Date(r.fecha))}</td><td>${esc(ej?.titulo || '')}</td><td>${r.ok ? 'Sí' : '<span class="chip warn">Parcial</span>'}</td><td class="num">${r.borg >= 7 ? `<span class="chip crit">${fmtNum(r.borg, 1)}</span>` : fmtNum(r.borg, 1)}</td><td class="num">${r.spo2 != null && pl && r.spo2 < pl.spo2 ? `<span class="chip crit">${r.spo2}%</span>` : (r.spo2 != null ? r.spo2 + '%' : '—')}</td><td>${esc(r.com)}</td></tr>`; }).join('')}
+      </tbody></table></div>` : '<p class="empty">Sin registros todavía</p>'}
+    </section>`;
+  },
+  evaluaciones(p){
+    const ev = evalsDe(p.id).slice().reverse(), canEdit = S.role === 'neumonologa';
+    return `<section class="card"><div class="card-head"><h3>Evaluaciones pulmonares</h3>${canEdit ? `<button class="btn btn-primary" data-act="newEval">${ICONS.plus} Nueva evaluación</button>` : '<span class="muted" style="font-size:.85rem">Solo lectura. Las carga neumonología.</span>'}</div>
+    <div class="tbl-wrap"><table class="tbl"><thead><tr><th>Fecha</th><th>SpO₂ rep./esf.</th><th>FC</th><th>FR</th><th>Borg</th><th>mMRC</th><th>FEV1</th><th>FVC</th><th>FEV1/FVC</th><th>TM6M</th><th>Observaciones</th></tr></thead><tbody>
+    ${ev.map(e => `<tr><td>${fmtFecha(new Date(e.fecha))}</td><td class="num">${e.spo2r}% / ${e.spo2e ?? '—'}%</td><td class="num">${e.fc}</td><td class="num">${e.fr ?? '—'}</td><td class="num">${fmtNum(e.borg, 1)}</td><td class="num">${e.mmrc ?? '—'}</td><td class="num">${fmtNum(e.fev1, 2)} L (${e.fev1p}%)</td><td class="num">${fmtNum(e.fvc, 2)} L (${e.fvcp}%)</td><td class="num">${e.fev1 && e.fvc ? fmtNum(e.fev1 / e.fvc, 2) : '—'}</td><td class="num">${e.tm6m ?? '—'} m</td><td style="min-width:200px">${esc(e.obs)}</td></tr>`).join('') || '<tr><td colspan="11" class="empty">Sin evaluaciones</td></tr>'}
+    </tbody></table></div></section>`;
+  },
+  plan(p){
+    const pl = planDe(p.id), canEdit = S.role === 'neumonologa';
+    if (!pl && !canEdit) return '<section class="card empty">Este paciente todavía no tiene un plan. Lo prescribe neumonología.</section>';
+    if (!canEdit) return `<section class="card stack"><div class="card-head" style="margin:0"><h3>Plan prescripto por ${esc(proNombre(pro(pl.pro)))}</h3><span class="chip ok">${pl.estado}</span></div>
+      <p>${esc(pl.obj)}</p>
+      <div class="grid g4"><div class="kpi"><span class="eyebrow">Sesiones / semana</span><span class="v">${pl.ses}</span></div><div class="kpi"><span class="eyebrow">SpO₂ mínima</span><span class="v">${pl.spo2}<small>%</small></span></div><div class="kpi"><span class="eyebrow">FC máxima</span><span class="v">${pl.fc ?? '—'}<small>lpm</small></span></div><div class="kpi"><span class="eyebrow">Vigencia</span><span class="v" style="font-size:1.1rem">${fmtFecha(new Date(pl.inicio))} → ${fmtFecha(new Date(pl.fin))}</span></div></div>
+      <div class="note-box">Los umbrales disparan alertas automáticas cuando el paciente registra valores fuera de rango en su casa.</div></section>`;
+    const v = pl || {obj:'', ses:3, spo2:88, fc:130, inicio:new Date().toISOString(), fin:new Date(Date.now() + 56 * DAY).toISOString(), estado:'Activo'};
+    return `<section class="card"><form data-form="plan" class="stack">
+      <div class="card-head" style="margin:0"><h3>${pl ? 'Plan de tratamiento' : 'Prescribir plan de tratamiento'}</h3>${pl ? `<span class="chip ok">${pl.estado}</span>` : ''}</div>
+      <div class="field"><label for="pl-obj">Objetivos</label><textarea id="pl-obj" name="obj" required>${esc(v.obj)}</textarea></div>
+      <div class="form-grid">
+        <div class="field"><label for="pl-ses">Sesiones por semana</label><input id="pl-ses" name="ses" type="number" min="1" max="7" value="${v.ses}" required></div>
+        <div class="field"><label for="pl-spo2">SpO₂ mínima segura (%)</label><input id="pl-spo2" name="spo2" type="number" min="80" max="96" value="${v.spo2}" required><span class="hint">Por debajo, se alerta al equipo</span></div>
+        <div class="field"><label for="pl-fc">FC máxima (lpm)</label><input id="pl-fc" name="fc" type="number" min="80" max="200" value="${v.fc}"></div>
+        <div class="field"><label for="pl-fin">Fecha de fin</label><input id="pl-fin" name="fin" type="date" value="${v.fin.slice(0, 10)}" required></div>
+        <div class="field"><label for="pl-est">Estado</label><select id="pl-est" name="estado">${['Activo','Pausado','Finalizado'].map(s => `<option ${v.estado === s ? 'selected' : ''}>${s}</option>`).join('')}</select></div>
+      </div>
+      <div class="row"><button class="btn btn-primary" type="submit">${pl ? 'Guardar cambios' : 'Prescribir plan'}</button><span class="muted" style="font-size:.85rem">Al guardar se notifica a kinesiología.</span></div>
+    </form></section>`;
+  },
+  rutina(p){
+    const pl = planDe(p.id), as = asigDe(p.id), canEdit = S.role === 'kinesiologo';
+    if (!pl) return '<section class="card empty">Sin plan activo. Primero neumonología prescribe el plan; después kinesiología asigna la rutina.</section>';
+    return `<section class="card"><div class="card-head"><h3>Rutina asignada</h3>${canEdit ? `<button class="btn btn-primary" data-act="asignar" data-pac="${p.id}">${ICONS.plus} Agregar ejercicio</button>` : '<span class="muted" style="font-size:.85rem">Solo lectura. La asigna kinesiología.</span>'}</div>
+    ${as.length ? `<div class="exlist">${as.map(a => { const e = ejer(a.ej); return `<div class="ex">${thumb(e)}<div class="ex-body"><strong>${esc(e.titulo)}</strong><span class="muted">${[a.series && a.reps ? `${a.series}×${a.reps}` : '', a.durSeg ? durTxt(a.durSeg) : '', `${a.veces}×/sem`].filter(Boolean).join(' · ')} · ${e.cat} · ${e.nivel}</span>${a.ind ? `<span style="font-size:.88em">${esc(a.ind)}</span>` : ''}${e.contra ? `<span class="chip warn" style="align-self:flex-start">Contraindicación: ${esc(e.contra)}</span>` : ''}</div>
+      <div class="ex-actions"><button class="btn btn-sm" data-act="play" data-id="${e.id}">${ICONS.play} Vista previa</button>${canEdit ? `<button class="btn btn-sm btn-danger" data-act="quitar" data-id="${a.id}">Quitar</button>` : ''}</div></div>`; }).join('')}</div>`
+      : `<div class="empty"><p><strong>Plan sin rutina.</strong></p><p>${canEdit ? 'Agregá ejercicios desde la biblioteca para que el paciente los vea en su portal.' : 'Kinesiología todavía no asignó ejercicios.'}</p></div>`}</section>`;
+  },
+  notas(p){
+    const all = notasDe(p.id), roots = all.filter(n => !n.padre).sort((a, b) => b.fecha.localeCompare(a.fecha));
+    const one = n => { const a = pro(n.autor); return `<div class="note ${a.esp === 'Kinesiología' ? 'kine' : 'med'}"><div class="meta"><strong>${esc(proNombre(a))}</strong><span>${a.esp}</span><span>·</span><span>${diaRel(new Date(n.fecha))} ${fmtHora(new Date(n.fecha))}</span><span class="chip">${n.tipo}</span>${n.visible ? '<span class="chip info">Visible para el paciente</span>' : ''}</div><p>${esc(n.texto)}</p></div>`; };
+    return `<section class="card"><form data-form="nota" class="stack">
+      <h3>Nueva nota</h3>
+      <div class="field"><label for="nota-txt" class="lbl">Evolución${ui.replyTo ? ' · respondiendo una nota' : ''}</label><textarea id="nota-txt" name="texto" required placeholder="${S.role === 'neumonologa' ? 'Ej.: Ajusto umbral de SpO₂ a 90% durante el ejercicio…' : 'Ej.: Tolera bien la progresión, Borg 3/10…'}"></textarea></div>
+      <div class="row"><label class="check"><input type="checkbox" name="visible" id="nota-vis"> Visible para el paciente</label><span class="spacer"></span>${ui.replyTo ? '<button type="button" class="btn btn-sm" data-act="cancelReply">Cancelar respuesta</button>' : ''}<button class="btn btn-primary" type="submit">Guardar nota</button></div>
+      <p class="muted" style="font-size:.8rem">Las notas no se editan ni se borran (Ley 26.529). Para corregir, agregá una nota nueva.</p>
+    </form></section>
+    <div class="thread">${roots.map(n => `<div class="stack" style="gap:8px">${one(n)}${all.filter(r => r.padre === n.id).length ? `<div class="replies">${all.filter(r => r.padre === n.id).sort((a, b) => a.fecha.localeCompare(b.fecha)).map(one).join('')}</div>` : ''}<div><button class="btn btn-sm" data-act="reply" data-id="${n.id}">Responder</button></div></div>`).join('') || '<p class="empty">Sin notas</p>'}</div>`;
+  }
+};
+
+VIEWS.kinesiologo.bandeja = () => {
+  const al = alertas(), sinRut = S.planes.filter(pl => pl.estado === 'Activo' && !S.asignados.some(a => a.plan === pl.id && a.activo));
+  return `<div class="page-head"><div><h1>Bandeja</h1><p>Lo que necesita tu atención hoy.</p></div></div>
+  <section class="card"><div class="card-head"><h2>Alertas domiciliarias</h2><span class="chip ${al.length ? 'crit' : 'ok'}">${al.length} sin revisar</span></div>
+    ${al.length ? `<div class="tbl-wrap"><table class="tbl"><thead><tr><th>Paciente</th><th>Ejercicio</th><th>SpO₂</th><th>Borg</th><th>Cuándo</th><th>Comentario</th><th></th></tr></thead><tbody>
+    ${al.map(r => { const p = pac(r.pac), pl = planDe(r.pac), a = S.asignados.find(x => x.id === r.asig), e = a && ejer(a.ej); return `<tr><td><strong>${esc(nombre(p))}</strong></td><td>${esc(e?.titulo || '')}</td><td class="num">${r.spo2 != null ? `<span class="chip ${pl && r.spo2 < pl.spo2 ? 'crit' : ''}">${r.spo2}%</span>` : '—'}</td><td class="num"><span class="chip ${r.borg >= 7 ? 'crit' : ''}">${fmtNum(r.borg, 1)}</span></td><td>${diaRel(new Date(r.fecha))} ${fmtHora(new Date(r.fecha))}</td><td>${esc(r.com)}</td><td><div class="row" style="flex-wrap:nowrap"><button class="btn btn-sm" data-act="ficha" data-id="${p.id}">Ficha</button><button class="btn btn-sm" data-act="revisar" data-id="${r.id}">Marcar revisada</button></div></td></tr>`; }).join('')}
+    </tbody></table></div>` : '<p class="empty">Sin alertas. Todos los registros están dentro de los umbrales.</p>'}
+  </section>
+  <div class="grid g2">
+    <section class="card"><div class="card-head"><h2>Planes nuevos sin rutina</h2></div>
+      ${sinRut.map(pl => { const p = pac(pl.pac); return `<div class="slot" style="grid-template-columns:minmax(0,1fr) auto"><div class="slot-body"><strong>${esc(nombre(p))}</strong><span class="muted">${CIE[p.dx]} · prescripto ${diaRel(new Date(pl.inicio)).toLowerCase()} por ${esc(proNombre(pro(pl.pro)))}</span><span style="font-size:.88rem">${esc(pl.obj)}</span></div><div><button class="btn btn-primary btn-sm" data-act="asignar" data-pac="${p.id}">Asignar rutina</button></div></div>`; }).join('') || '<p class="empty">Todos los planes tienen rutina.</p>'}
+    </section>
+    <section class="card"><div class="card-head"><h2>Turnos de hoy</h2></div>${agendaPro('pr2')}</section>
+  </div>`;
+};
+VIEWS.kinesiologo.biblioteca = () => {
+  const f = ui.lib, q = f.q.trim().toLowerCase();
+  const list = S.ejercicios.filter(e => (f.cat === 'Todas' || e.cat === f.cat) && (!f.nivel || e.nivel === f.nivel) && (!q || e.titulo.toLowerCase().includes(q)));
+  return `<div class="page-head"><div><h1>Biblioteca de ejercicios</h1><p>${S.ejercicios.length} ejercicios con video. Asignalos con la dosis que corresponda a cada paciente.</p></div><button class="btn btn-primary" data-act="subirEj">${ICONS.plus} Subir ejercicio</button></div>
+  <div class="filters">
+    <div class="seg" role="group" aria-label="Categoría">${['Todas', ...Object.keys(CATS)].map(c => `<button data-act="libCat" data-c="${c}" aria-pressed="${f.cat === c}">${c}</button>`).join('')}</div>
+    <div class="field"><select id="lib-nivel" data-input="libNivel" aria-label="Nivel"><option value="">Todos los niveles</option>${['Inicial','Intermedio','Avanzado'].map(n => `<option ${f.nivel === n ? 'selected' : ''}>${n}</option>`).join('')}</select></div>
+    <div class="field"><input id="lib-q" data-input="libQ" type="search" placeholder="Buscar por nombre" value="${esc(f.q)}" aria-label="Buscar ejercicio"></div>
+  </div>
+  <div class="lib">${list.map(e => `<article class="card">${thumb(e, `<span class="len">${durTxt(e.dur)}</span>`)}<div><h3>${esc(e.titulo)}</h3><div class="row" style="margin-top:6px;gap:6px"><span class="chip" style="background:${CATS[e.cat].s};color:${CATS[e.cat].c}">${e.cat}</span><span class="chip">${e.nivel}</span></div></div>${e.contra ? `<span class="muted" style="font-size:.8rem">Contraindicación: ${esc(e.contra)}</span>` : ''}<div class="row" style="margin-top:auto"><button class="btn btn-sm" data-act="play" data-id="${e.id}">${ICONS.play} Vista previa</button><button class="btn btn-sm btn-primary" data-act="asignar" data-ej="${e.id}">Asignar</button></div></article>`).join('') || '<p class="empty">Ningún ejercicio coincide con el filtro.</p>'}</div>`;
+};
+
+/* ============ Vistas: recepción ============ */
+VIEWS.recepcion.agenda = () => {
+  const d = new Date(); d.setDate(d.getDate() + ui.dayOff);
+  const col = proId => { const ts = S.turnos.filter(t => t.pro === proId && sameDay(new Date(t.inicio), d)).sort((a, b) => a.inicio.localeCompare(b.inicio)); const p = pro(proId);
+    return `<section class="card"><div class="card-head"><div><h2>${esc(proNombre(p))}</h2><span class="muted" style="font-size:.85rem">${p.esp}</span></div><span class="chip">${ts.length} turnos</span></div>
+    ${ts.map(t => { const pa = pac(t.pac), di = new Date(t.inicio); const open = !['Atendido','Ausente','Cancelado'].includes(t.estado);
+      return `<div class="slot"><div class="t">${fmtHora(di)}<small>${t.dur} min</small></div><div class="slot-body"><div class="row">${modChip(t.mod)} ${estadoChip(t.estado)}</div><strong>${esc(nombre(pa))}</strong><span class="muted">${esc(t.motivo)} · ${esc(pa.os)}</span>
+      ${t.meet ? `<div class="meet-line">${ICONS.video.replace('<svg', '<svg width="15" height="15"')} ${t.meet}<button class="x" style="width:26px;height:26px" data-act="copy" data-txt="https://${t.meet}" aria-label="Copiar enlace">${ICONS.copy}</button></div>` : ''}
+      ${open ? `<div class="row"><button class="btn btn-sm" data-act="estado" data-id="${t.id}" data-e="Atendido">Atendido</button><button class="btn btn-sm" data-act="estado" data-id="${t.id}" data-e="Ausente">Ausente</button><button class="btn btn-sm btn-danger" data-act="estado" data-id="${t.id}" data-e="Cancelado">Cancelar</button></div>` : ''}
+      </div></div>`; }).join('') || '<p class="empty">Sin turnos este día</p>'}</section>`; };
+  return `<div class="page-head"><div><h1>Agenda</h1><p style="text-transform:capitalize">${fmtFechaLarga(d)}</p></div>
+    <div class="row"><button class="btn btn-sm" data-act="day" data-d="-1" aria-label="Día anterior">${ICONS.left}</button><button class="btn btn-sm" data-act="day" data-d="0">Hoy</button><button class="btn btn-sm" data-act="day" data-d="1" aria-label="Día siguiente">${ICONS.right}</button><button class="btn btn-primary" data-act="nav" data-v="nuevo-turno">${ICONS.plus} Nuevo turno</button></div></div>
+  ${S.turnos.some(t => t.estado === 'Cancelación solicitada') ? `<div class="safety">${ICONS.alert}<div><strong>Pedidos de cancelación</strong><p>${S.turnos.filter(t => t.estado === 'Cancelación solicitada').map(t => `${esc(nombre(pac(t.pac)))}: ${diaRel(new Date(t.inicio))} ${fmtHora(new Date(t.inicio))}`).join(' · ')}</p></div></div>` : ''}
+  <div class="agenda">${col('pr1')}${col('pr2')}</div>`;
+};
+VIEWS.recepcion['nuevo-turno'] = () => {
+  const r = ui.turnoResult; const tm = new Date(Date.now() + DAY).toISOString().slice(0, 10);
+  const horas = []; for (let h = 8; h < 20; h++) for (const m of [0, 30]) horas.push(`${pad(h)}:${pad(m)}`);
+  return `<div class="page-head"><div><h1>Nuevo turno</h1><p>Si el turno es virtual, se crea el evento en Google Calendar con su enlace de Meet y se envía la invitación al paciente.</p></div></div>
+  <div class="grid g-hero">
+  <section class="card"><form data-form="turno" class="stack">
+    <div class="form-grid">
+      <div class="field"><label for="tu-pac">Paciente</label><select id="tu-pac" name="pac" required>${S.pacientes.map(p => `<option value="${p.id}">${esc(nombre(p))} · DNI ${p.dni}</option>`).join('')}</select></div>
+      <div class="field"><label for="tu-pro">Profesional</label><select id="tu-pro" name="pro">${S.profesionales.map(p => `<option value="${p.id}">${esc(proNombre(p))} · ${p.esp}</option>`).join('')}</select></div>
+    </div>
+    <div class="field"><span class="lbl">Modalidad</span><div class="radio-cards">
+      <label><input type="radio" name="mod" value="Virtual" checked><span><b>Virtual</b><small>Videollamada por Google Meet</small></span></label>
+      <label><input type="radio" name="mod" value="Presencial"><span><b>Presencial</b><small>Sede Caballito</small></span></label>
+    </div></div>
+    <div class="form-grid">
+      <div class="field"><label for="tu-fecha">Fecha</label><input id="tu-fecha" name="fecha" type="date" value="${tm}" required></div>
+      <div class="field"><label for="tu-hora">Hora</label><select id="tu-hora" name="hora">${horas.map(h => `<option ${h === '10:00' ? 'selected' : ''}>${h}</option>`).join('')}</select></div>
+      <div class="field"><label for="tu-dur">Duración</label><select id="tu-dur" name="dur"><option value="30">30 min</option><option value="40" selected>40 min</option><option value="60">60 min</option></select></div>
+    </div>
+    <div class="field"><label for="tu-mot">Motivo</label><input id="tu-mot" name="motivo" value="Sesión de telerrehabilitación"></div>
+    ${r && r.error ? `<div class="err">${esc(r.error)}</div>` : ''}
+    <div class="row"><button class="btn btn-primary" type="submit" ${r && r.loading ? 'disabled' : ''}>${r && r.loading ? 'Creando evento en Google Calendar…' : 'Confirmar turno'}</button></div>
+  </form></section>
+  <section class="card stack">
+    <div class="eyebrow">Resultado</div>
+    ${r && r.turno ? (() => { const t = r.turno, p = pac(t.pac), pr = pro(t.pro), d = new Date(t.inicio); return `<div class="okbox"><strong>Turno confirmado</strong><br>${esc(nombre(p))} con ${esc(proNombre(pr))}<br><span style="text-transform:capitalize">${fmtFechaLarga(d)}</span>, ${fmtHora(d)} · ${t.dur} min</div>
+      ${t.meet ? `<div class="stack" style="gap:6px"><span class="lbl muted" style="font-size:.8rem;font-weight:700">Enlace de Google Meet generado</span><div class="meet-line" style="font-size:.95rem;color:var(--fg)">${t.meet}<button class="x" style="width:30px;height:30px" data-act="copy" data-txt="https://${t.meet}" aria-label="Copiar enlace">${ICONS.copy}</button></div></div>
+      <ul class="steps muted"><li>Evento creado en el calendario de ${esc(pr.cal)}</li><li>Invitación enviada a ${esc(p.email)}</li><li>Recordatorios programados 24 h y 1 h antes</li></ul>` : `<ul class="steps muted"><li>Confirmación enviada a ${esc(p.email)}</li><li>Recordatorio programado 24 h antes</li></ul>`}`; })()
+    : '<p class="muted">Completá el formulario. Acá vas a ver el enlace de la videollamada y las notificaciones enviadas.</p><div class="note-box">El sistema no permite superponer turnos del mismo profesional ni agendar en el pasado.</div>'}
+  </section></div>`;
+};
+VIEWS.recepcion.pacientes = () => `<div class="page-head"><div><h1>Pacientes</h1><p>Datos de contacto y cobertura. La historia clínica solo la ven los profesionales.</p></div><button class="btn btn-primary" data-act="nuevoPac">${ICONS.plus} Nuevo paciente</button></div>
+  <section class="card"><div class="tbl-wrap"><table class="tbl"><thead><tr><th>Paciente</th><th>DNI</th><th>Cobertura</th><th>Teléfono</th><th>Email</th><th>Portal</th><th>Próximo turno</th></tr></thead><tbody>
+  ${S.pacientes.map(p => { const t = proximoTurno(p.id); return `<tr><td><strong>${esc(nombre(p))}</strong></td><td class="mono">${p.dni}</td><td>${esc(p.os)}<br><span class="muted mono" style="font-size:.78rem">${esc(p.afil)}</span></td><td>${esc(p.tel)}</td><td>${esc(p.email)}</td><td><span class="chip ${p.portal === 'Activo' ? 'ok' : 'warn'}">${p.portal}</span></td><td>${t ? `${diaRel(new Date(t.inicio))} ${fmtHora(new Date(t.inicio))}` : '—'}</td></tr>`; }).join('')}
+  </tbody></table></div></section>`;
+
+/* ============ Modales ============ */
+function renderModal(){
+  const m = ui.modal; const wrap = (title, body, foot = '', wide = false, sub = '') => `<div class="modal-back" data-act="backdrop"><div class="modal ${wide ? 'wide' : ''}" role="dialog" aria-modal="true" aria-label="${esc(title)}"><div class="modal-head"><div><h2>${esc(title)}</h2>${sub ? `<p class="muted" style="margin-top:3px">${sub}</p>` : ''}</div><button class="x" data-act="close" aria-label="Cerrar">${ICONS.x}</button></div><div class="modal-body">${body}</div>${foot ? `<div class="modal-foot">${foot}</div>` : ''}</div></div>`;
+  if (m.type === 'meet'){
+    const t = S.turnos.find(x => x.id === m.id), p = pac(t.pac), pr = pro(t.pro), isPac = S.role === 'paciente';
+    return wrap(isPac ? 'Entrando a tu videollamada' : `Videollamada con ${nombre(p)}`, `
+      <div class="player" style="align-items:flex-start;gap:10px"><span class="eyebrow">Sala de Google Meet</span><div class="meet-line" style="font-size:1.05rem;color:var(--fg)">${t.meet}<button class="x" style="width:30px;height:30px" data-act="copy" data-txt="https://${t.meet}" aria-label="Copiar enlace">${ICONS.copy}</button></div><span class="muted">${isPac ? esc(proNombre(pr)) : esc(nombre(p))} · ${fmtHora(new Date(t.inicio))} · ${t.dur} min</span></div>
+      ${isPac ? `<div><strong>Antes de entrar</strong><ul class="steps" style="margin-top:6px"><li>Tené a mano tu oxímetro.</li><li>Buscá un lugar con espacio para moverte y una silla firme.</li><li>Dejá cerca agua y tu medicación de rescate.</li></ul></div>` : `<div class="note-box">Último registro domiciliario: ${(() => { const r = regsDe(p.id)[0]; return r ? `SpO₂ ${r.spo2 ?? '—'}%, Borg ${fmtNum(r.borg, 1)} (${diaRel(new Date(r.fecha)).toLowerCase()})` : 'sin registros'; })()}.</div>`}
+      <p class="muted" style="font-size:.85rem">En esta demo el botón abre una sala nueva de Google Meet. En el sistema real abre la sala de este turno, creada automáticamente al agendarlo.</p>`,
+      `<button class="btn" data-act="close">Cancelar</button><a class="btn btn-primary" href="https://meet.google.com/new" target="_blank" rel="noopener noreferrer">${ICONS.ext} Abrir Google Meet</a>`);
+  }
+  if (m.type === 'player'){
+    const e = ejer(m.id), pat = PATTERNS[e.pat];
+    return wrap(e.titulo, `
+      <div class="player">
+        <div class="orb-wrap"><div class="orb" id="orb"></div></div>
+        <div class="phase" id="phase" aria-live="polite">Tocá Reproducir para empezar</div>
+        <div class="count" id="count">Ciclo: ${pat.map(p => p.s + ' s').join(' + ')}</div>
+        <div class="row"><button class="btn btn-primary" data-act="playToggle" id="pbtn">${player.running ? ICONS.pause + ' Pausar' : ICONS.play + ' Reproducir'}</button></div>
+        <div class="bar" style="width:100%"><i id="pbar" style="width:0%"></i></div>
+      </div>
+      <div><strong>Cómo hacerlo</strong><ol class="steps" style="margin-top:6px">${e.pasos.map(s => `<li>${esc(s)}</li>`).join('')}</ol></div>
+      ${e.contra ? `<div class="note-box">No hacer si: ${esc(e.contra)}</div>` : ''}
+      <p class="muted" style="font-size:.82rem">Prototipo: la animación guía el ritmo respiratorio. En el sistema real se reproduce el video grabado por el equipo.</p>`,
+      m.asig ? `<button class="btn" data-act="close">Cerrar</button><button class="btn btn-primary" data-act="registrar" data-asig="${m.asig}">Lo hice</button>` : '', false, `${e.cat} · ${e.nivel} · ${durTxt(e.dur)}`);
+  }
+  if (m.type === 'registro'){
+    const a = S.asignados.find(x => x.id === m.asig), e = ejer(a.ej), pl = S.planes.find(x => x.id === a.plan);
+    if (m.result) return wrap(m.result.alerta ? 'Pará y descansá' : '¡Bien hecho!', m.result.alerta ? `
+      <div class="safety">${ICONS.alert}<div><strong>${m.result.spo2 != null && m.result.spo2 < pl.spo2 ? `Tu saturación (${m.result.spo2}%) está por debajo de tu límite de ${pl.spo2}%.` : `Registraste mucha falta de aire (Borg ${fmtNum(m.result.borg, 1)}).`}</strong>
+      <p>Sentate, respirá con labios fruncidos y volvé a medir en 5 minutos. Si no mejora, tenés dolor de pecho o te mareás, llamá al 107.</p></div></div>
+      <div class="note-box">Le avisamos a ${esc(proNombre(pro('pr2')))}. Lo va a ver en su bandeja de alertas.</div>`
+      : `<div class="okbox">Registramos <b>${esc(e.titulo)}</b>. Tu constancia esta semana es de <b>${adherencia('p1')}%</b>.</div>`,
+      `<button class="btn btn-primary" data-act="close">Entendido</button>`);
+    return wrap('¿Cómo te fue?', `<form data-form="registro" id="f-reg" class="stack">
+      <input type="hidden" name="asig" value="${a.id}">
+      <p class="muted">${esc(e.titulo)}</p>
+      <div class="field"><span class="lbl">¿Lo completaste?</span><div class="radio-cards"><label><input type="radio" name="ok" value="1" checked><span><b>Sí, completo</b></span></label><label><input type="radio" name="ok" value="0"><span><b>Tuve que parar</b></span></label></div></div>
+      <div class="field"><span class="lbl">¿Cuánta falta de aire sentiste? (escala de Borg)</span><div class="borg">${BORG.map(([v, l]) => `<label class="${v >= 7 ? 'hi' : ''}"><input type="radio" name="borg" value="${v}" ${v === 3 ? 'checked' : ''}><b>${fmtNum(v, v % 1 ? 1 : 0)}</b><span>${l || '&nbsp;'}</span></label>`).join('')}</div></div>
+      <div class="form-grid">
+        <div class="field"><label for="reg-spo2">Saturación al terminar (%)</label><input id="reg-spo2" name="spo2" type="number" min="70" max="100" inputmode="numeric" placeholder="Ej.: 92"><span class="hint">Opcional, si tenés oxímetro</span></div>
+        <div class="field"><label for="reg-fc">Pulso (lpm)</label><input id="reg-fc" name="fc" type="number" min="40" max="200" inputmode="numeric" placeholder="Ej.: 98"></div>
+      </div>
+      <div class="field"><label for="reg-com">Comentario</label><input id="reg-com" name="com" placeholder="Opcional"></div>
+    </form>`, `<button class="btn" data-act="close">Cancelar</button><button class="btn btn-primary" type="submit" form="f-reg">Guardar</button>`);
+  }
+  if (m.type === 'eval'){
+    const p = pac(ui.ficha);
+    return wrap(`Nueva evaluación · ${nombre(p)}`, `<form data-form="evaluacion" id="f-eval" class="stack">
+      <div class="eyebrow">Signos vitales</div>
+      <div class="form-grid">
+        <div class="field"><label for="ev-spo2r">SpO₂ reposo (%)</label><input id="ev-spo2r" name="spo2r" type="number" min="50" max="100" required></div>
+        <div class="field"><label for="ev-spo2e">SpO₂ esfuerzo (%)</label><input id="ev-spo2e" name="spo2e" type="number" min="50" max="100"></div>
+        <div class="field"><label for="ev-fc">FC (lpm)</label><input id="ev-fc" name="fc" type="number" min="30" max="220" required></div>
+        <div class="field"><label for="ev-fr">FR (rpm)</label><input id="ev-fr" name="fr" type="number" min="6" max="60"></div>
+        <div class="field"><label for="ev-borg">Borg disnea (0–10)</label><input id="ev-borg" name="borg" type="number" min="0" max="10" step="0.5" required></div>
+        <div class="field"><label for="ev-mmrc">mMRC</label><select id="ev-mmrc" name="mmrc">${[0,1,2,3,4].map(v => `<option>${v}</option>`).join('')}</select></div>
+      </div>
+      <div class="eyebrow">Espirometría y capacidad funcional</div>
+      <div class="form-grid">
+        <div class="field"><label for="ev-fev1">FEV1 (L)</label><input id="ev-fev1" name="fev1" type="number" step="0.01" min="0.2" max="7"></div>
+        <div class="field"><label for="ev-fev1p">FEV1 (% pred.)</label><input id="ev-fev1p" name="fev1p" type="number" min="5" max="150"></div>
+        <div class="field"><label for="ev-fvc">FVC (L)</label><input id="ev-fvc" name="fvc" type="number" step="0.01" min="0.2" max="8"></div>
+        <div class="field"><label for="ev-fvcp">FVC (% pred.)</label><input id="ev-fvcp" name="fvcp" type="number" min="5" max="150"></div>
+        <div class="field"><label for="ev-tm6m">TM6M (metros)</label><input id="ev-tm6m" name="tm6m" type="number" min="0" max="900"></div>
+        <div class="field"><label for="ev-cie">Diagnóstico (CIE-10)</label><select id="ev-cie" name="cie">${Object.entries(CIE).map(([k, v]) => `<option value="${k}" ${p.dx === k ? 'selected' : ''}>${k} · ${v}</option>`).join('')}</select></div>
+      </div>
+      <div class="note-box" id="ev-interp">Completá FEV1 y FVC para calcular la relación y la clasificación.</div>
+      <div class="field"><label for="ev-obs">Observaciones</label><textarea id="ev-obs" name="obs"></textarea></div>
+      ${m.error ? `<div class="err">${esc(m.error)}</div>` : ''}
+    </form>`, `<button class="btn" data-act="close">Cancelar</button><button class="btn btn-primary" type="submit" form="f-eval">Guardar evaluación</button>`, true);
+  }
+  if (m.type === 'asignar'){
+    const fixedPac = m.pac, fixedEj = m.ej;
+    return wrap('Asignar ejercicio', `<form data-form="asignar" id="f-asig" class="stack">
+      <div class="form-grid">
+        <div class="field"><label for="as-pac">Paciente</label><select id="as-pac" name="pac" ${fixedPac ? 'disabled' : ''}>${S.pacientes.map(p => `<option value="${p.id}" ${p.id === fixedPac ? 'selected' : ''}>${esc(nombre(p))}</option>`).join('')}</select>${fixedPac ? `<input type="hidden" name="pac" value="${fixedPac}">` : ''}</div>
+        <div class="field"><label for="as-ej">Ejercicio</label><select id="as-ej" name="ej">${S.ejercicios.map(e => `<option value="${e.id}" ${e.id === fixedEj ? 'selected' : ''}>${esc(e.titulo)} · ${e.nivel}</option>`).join('')}</select></div>
+      </div>
+      <div class="form-grid">
+        <div class="field"><label for="as-ser">Series</label><input id="as-ser" name="series" type="number" min="1" max="10" value="3"></div>
+        <div class="field"><label for="as-rep">Repeticiones</label><input id="as-rep" name="reps" type="number" min="1" max="50" value="10"></div>
+        <div class="field"><label for="as-dur">o duración (min)</label><input id="as-dur" name="dur" type="number" min="1" max="60" placeholder="—"></div>
+        <div class="field"><label for="as-vec">Veces por semana</label><input id="as-vec" name="veces" type="number" min="1" max="7" value="3" required></div>
+      </div>
+      <div class="field"><label for="as-ind">Indicaciones para el paciente</label><input id="as-ind" name="ind" placeholder="Ej.: Hacelo después de la nebulización"></div>
+      ${m.error ? `<div class="err">${esc(m.error)}</div>` : ''}
+    </form>`, `<button class="btn" data-act="close">Cancelar</button><button class="btn btn-primary" type="submit" form="f-asig">Asignar</button>`);
+  }
+  if (m.type === 'paciente'){
+    return wrap('Nuevo paciente', `<form data-form="paciente" id="f-pac" class="stack"><div class="form-grid">
+      <div class="field"><label for="np-nom">Nombre</label><input id="np-nom" name="nombre" required></div>
+      <div class="field"><label for="np-ape">Apellido</label><input id="np-ape" name="apellido" required></div>
+      <div class="field"><label for="np-dni">DNI</label><input id="np-dni" name="dni" required inputmode="numeric"></div>
+      <div class="field"><label for="np-nac">Fecha de nacimiento</label><input id="np-nac" name="nac" type="date" value="1960-01-01" required></div>
+      <div class="field"><label for="np-mail">Email</label><input id="np-mail" name="email" type="email" required></div>
+      <div class="field"><label for="np-tel">Teléfono</label><input id="np-tel" name="tel"></div>
+      <div class="field"><label for="np-os">Obra social / prepaga</label><input id="np-os" name="os"></div>
+      <div class="field"><label for="np-af">N.º de afiliado</label><input id="np-af" name="afil"></div>
+      <div class="field"><label for="np-dx">Motivo de derivación</label><select id="np-dx" name="dx">${Object.entries(CIE).map(([k, v]) => `<option value="${k}">${v}</option>`).join('')}</select></div>
+    </div><p class="muted" style="font-size:.85rem">Al guardar, el paciente recibe un email para activar su acceso al portal.</p></form>`,
+      `<button class="btn" data-act="close">Cancelar</button><button class="btn btn-primary" type="submit" form="f-pac">Guardar y enviar invitación</button>`, true);
+  }
+  if (m.type === 'subirEj'){
+    return wrap('Subir ejercicio a la biblioteca', `<form data-form="ejercicio" id="f-ej" class="stack">
+      <div class="field"><label for="ne-tit">Título</label><input id="ne-tit" name="titulo" required></div>
+      <div class="form-grid">
+        <div class="field"><label for="ne-cat">Categoría</label><select id="ne-cat" name="cat">${Object.keys(CATS).map(c => `<option>${c}</option>`).join('')}</select></div>
+        <div class="field"><label for="ne-niv">Nivel</label><select id="ne-niv" name="nivel"><option>Inicial</option><option>Intermedio</option><option>Avanzado</option></select></div>
+        <div class="field"><label for="ne-dur">Duración (min)</label><input id="ne-dur" name="dur" type="number" min="1" max="60" value="5"></div>
+      </div>
+      <div class="field"><label for="ne-pasos">Pasos (uno por línea)</label><textarea id="ne-pasos" name="pasos" required></textarea></div>
+      <div class="field"><label for="ne-contra">Contraindicaciones</label><input id="ne-contra" name="contra"></div>
+      <div class="field"><label for="ne-vid">Video (MP4)</label><input id="ne-vid" name="video" type="file" accept="video/*"><span class="hint">En la demo el archivo no se sube; en el sistema real va a un almacenamiento privado.</span></div>
+    </form>`, `<button class="btn" data-act="close">Cancelar</button><button class="btn btn-primary" type="submit" form="f-ej">Agregar a la biblioteca</button>`);
+  }
+  return '';
+}
+
+/* ============ Reproductor ============ */
+const player = {running:false, i:0, left:0, elapsed:0, timer:null, id:null};
+function startPlayer(id){ stopPlayer(); Object.assign(player, {running:false, i:0, left:PATTERNS[ejer(id).pat][0].s, elapsed:0, id}); }
+function stopPlayer(){ clearInterval(player.timer); player.timer = null; player.running = false; }
+function playerTick(redrawOnly){
+  const e = ejer(player.id); if (!e) return; const pat = PATTERNS[e.pat], ph = pat[player.i];
+  const orb = document.getElementById('orb'), phase = document.getElementById('phase'), count = document.getElementById('count'), bar = document.getElementById('pbar');
+  if (!orb) return;
+  const demoTotal = 60;
+  if (player.running || player.elapsed > 0){
+    orb.style.transitionDuration = ph.s + 's';
+    orb.style.transform = ph.k === 'in' ? 'scale(1.45)' : ph.k === 'out' ? 'scale(.8)' : orb.style.transform || 'scale(1.2)';
+    phase.textContent = ph.t; count.textContent = `${Math.ceil(player.left)} s`;
+    bar.style.width = Math.min(100, player.elapsed / demoTotal * 100) + '%';
+  }
+  if (redrawOnly) return;
+  player.left -= 1; player.elapsed += 1;
+  if (player.left <= 0){ player.i = (player.i + 1) % pat.length; player.left = pat[player.i].s; }
+  if (player.elapsed >= demoTotal){ stopPlayer(); phase.textContent = '¡Terminaste! Registrá cómo te sentiste.'; count.textContent = ''; bar.style.width = '100%'; const b = document.getElementById('pbtn'); if (b) b.innerHTML = ICONS.play + ' Repetir'; player.elapsed = 0; player.i = 0; player.left = pat[0].s; }
+}
+function togglePlayer(){
+  const b = document.getElementById('pbtn');
+  if (player.running){ stopPlayer(); if (b) b.innerHTML = ICONS.play + ' Reanudar'; return; }
+  player.running = true; if (b) b.innerHTML = ICONS.pause + ' Pausar';
+  playerTick(false);
+  player.timer = setInterval(() => playerTick(false), 1000);
+}
+
+/* ============ Acciones ============ */
+const ACT = {
+  role: d => { S.role = d.r; ui.replyTo = null; save(); render(); window.scrollTo(0, 0); },
+  nav: d => { ui.view[S.role] = d.v; ui.turnoResult = null; render(); window.scrollTo(0, 0); },
+  ficha: d => { ui.ficha = d.id; ui.fichaTab = 'resumen'; ui.replyTo = null; ui.view[S.role] = 'ficha'; render(); window.scrollTo(0, 0); },
+  tab: d => { ui.fichaTab = d.t; render(); },
+  hideGuide: () => { ui.guideHidden[S.role] = true; render(); },
+  reset: () => { try { localStorage.removeItem(KEY); } catch(e) {} S = seed(); S.role = 'paciente'; ui.view = {paciente:'inicio', neumonologa:'agenda', kinesiologo:'bandeja', recepcion:'agenda'}; ui.guideHidden = {}; toast('Demo reiniciada con los datos de ejemplo'); },
+  join: d => openModal('meet', {id:d.id}),
+  play: d => { startPlayer(d.id); openModal('player', {id:d.id, asig:d.asig}); },
+  playToggle: () => togglePlayer(),
+  registrar: d => { stopPlayer(); openModal('registro', {asig:d.asig}); },
+  close: () => closeModal(),
+  backdrop: (d, el, ev) => { if (ev.target === el) closeModal(); },
+  pedirCancel: d => { const t = S.turnos.find(x => x.id === d.id); t.estado = 'Cancelación solicitada'; save(); toast('Pedido enviado. Recepción te va a contactar para reprogramar.'); },
+  newEval: () => openModal('eval'),
+  asignar: d => openModal('asignar', {pac:d.pac, ej:d.ej}),
+  quitar: d => { const a = S.asignados.find(x => x.id === d.id); a.activo = false; save(); toast(`Quitaste "${ejer(a.ej).titulo}" de la rutina`); },
+  reply: d => { ui.replyTo = d.id; render(); const t = document.getElementById('nota-txt'); if (t){ t.focus(); t.scrollIntoView({block:'center'}); } },
+  cancelReply: () => { ui.replyTo = null; render(); },
+  revisar: d => { S.registros.find(r => r.id === d.id).revisada = true; save(); toast('Alerta marcada como revisada'); },
+  libCat: d => { ui.lib.cat = d.c; render(); },
+  subirEj: () => openModal('subirEj'),
+  nuevoPac: () => openModal('paciente'),
+  day: d => { ui.dayOff = d.d === '0' ? 0 : ui.dayOff + Number(d.d); render(); },
+  estado: d => { const t = S.turnos.find(x => x.id === d.id); t.estado = d.e; save(); toast(`Turno de ${nombre(pac(t.pac))}: ${d.e.toLowerCase()}${d.e === 'Cancelado' && t.meet ? '. Se eliminó el evento de Google Calendar.' : ''}`); },
+  copy: d => { const done = () => toast('Enlace copiado'); try { navigator.clipboard.writeText(d.txt).then(done, () => toast(d.txt)); } catch(e) { toast(d.txt); } }
+};
+document.addEventListener('click', ev => {
+  const el = ev.target.closest('[data-act]'); if (!el) return;
+  const fn = ACT[el.dataset.act]; if (!fn) return;
+  if (el.dataset.act === 'backdrop'){ fn(el.dataset, el, ev); return; }
+  ev.preventDefault(); fn(el.dataset, el, ev);
+});
+document.addEventListener('keydown', ev => {
+  if (ev.key === 'Escape' && ui.modal) closeModal();
+  if (ev.key === 'Enter' && ev.target.matches('tr[data-act]')) ACT[ev.target.dataset.act](ev.target.dataset);
+});
+document.addEventListener('input', ev => {
+  const k = ev.target.dataset.input;
+  if (k === 'libQ'){ ui.lib.q = ev.target.value; render(); }
+  if (ev.target.closest('form[data-form="evaluacion"]')) updateInterp();
+});
+document.addEventListener('change', ev => { if (ev.target.dataset.input === 'libNivel'){ ui.lib.nivel = ev.target.value; render(); } });
+
+function updateInterp(){
+  const f = document.getElementById('f-eval'), box = document.getElementById('ev-interp'); if (!f || !box) return;
+  const fev1 = parseFloat(f.fev1.value), fvc = parseFloat(f.fvc.value), fev1p = parseFloat(f.fev1p.value);
+  if (!(fev1 > 0 && fvc > 0)){ box.textContent = 'Completá FEV1 y FVC para calcular la relación y la clasificación.'; return; }
+  const g = gold({fev1, fvc, fev1p: isNaN(fev1p) ? 100 : fev1p}); const r = fev1 / fvc;
+  box.innerHTML = `FEV1/FVC = <b class="mono">${fmtNum(r, 2)}</b> · ${r < 0.7 ? 'Patrón obstructivo' : 'Sin obstrucción'} ${isNaN(fev1p) && r < 0.7 ? '· cargá FEV1 % predicho para la clasificación GOLD' : `<span class="chip ${g.cls}">${g.txt}</span>`}`;
+}
+
+const num = v => v === '' || v == null ? null : Number(v);
+document.addEventListener('submit', ev => {
+  const f = ev.target, kind = f.dataset.form; if (!kind) return; ev.preventDefault();
+  const D = Object.fromEntries(new FormData(f).entries());
+  if (kind === 'registro'){
+    const a = S.asignados.find(x => x.id === D.asig), pl = S.planes.find(x => x.id === a.plan);
+    const spo2 = num(D.spo2), borg = Number(D.borg);
+    const alerta = (spo2 != null && spo2 < pl.spo2) || borg >= 7;
+    S.registros.push({id:uid(), pac:pl.pac, asig:a.id, fecha:new Date().toISOString(), ok:D.ok === '1', borg, spo2, fc:num(D.fc), com:D.com || '', alerta, revisada:false});
+    save(); ui.modal.result = {alerta, spo2, borg}; render(); return;
+  }
+  if (kind === 'evaluacion'){
+    const spo2r = num(D.spo2r), borg = num(D.borg);
+    if (spo2r < 50 || spo2r > 100){ ui.modal.error = 'La SpO₂ debe estar entre 50 y 100%.'; render(); return; }
+    if (borg < 0 || borg > 10){ ui.modal.error = 'El Borg va de 0 a 10.'; render(); return; }
+    S.evaluaciones.push({id:uid(), pac:ui.ficha, pro:'pr1', fecha:new Date().toISOString(), spo2r, spo2e:num(D.spo2e), fc:num(D.fc), fr:num(D.fr), borg, mmrc:num(D.mmrc), fev1:num(D.fev1), fev1p:num(D.fev1p), fvc:num(D.fvc), fvcp:num(D.fvcp), tm6m:num(D.tm6m), cie:D.cie, obs:D.obs});
+    pac(ui.ficha).dx = D.cie; save(); ui.modal = null; ui.fichaTab = 'evaluaciones'; toast('Evaluación guardada en la historia clínica'); return;
+  }
+  if (kind === 'plan'){
+    const pl = planDe(ui.ficha);
+    const v = {obj:D.obj, ses:num(D.ses), spo2:num(D.spo2), fc:num(D.fc), fin:new Date(D.fin + 'T12:00').toISOString(), estado:D.estado};
+    if (pl) Object.assign(pl, v); else S.planes.push({id:uid(), pac:ui.ficha, pro:'pr1', inicio:new Date().toISOString(), ...v});
+    save(); toast(pl ? 'Plan actualizado. Se notificó a kinesiología.' : 'Plan prescripto. Kinesiología ya puede asignar la rutina.'); return;
+  }
+  if (kind === 'nota'){
+    const tipo = S.role === 'neumonologa' ? 'Médica' : 'Kinésica';
+    S.notas.push({id:uid(), pac:ui.ficha, autor:ME[S.role], padre:ui.replyTo || null, tipo: ui.replyTo ? 'Interconsulta' : tipo, texto:D.texto, visible:!!D.visible, fecha:new Date().toISOString()});
+    ui.replyTo = null; save(); toast('Nota agregada a la historia clínica'); return;
+  }
+  if (kind === 'asignar'){
+    const pl = planDe(D.pac);
+    if (!pl){ ui.modal.error = `${nombre(pac(D.pac))} no tiene un plan activo. Primero lo prescribe neumonología.`; render(); return; }
+    const durMin = num(D.dur);
+    S.asignados.push({id:uid(), plan:pl.id, ej:D.ej, series: durMin ? null : num(D.series), reps: durMin ? null : num(D.reps), durSeg: durMin ? durMin * 60 : null, veces:num(D.veces), ind:D.ind || '', orden:S.asignados.length, activo:true, pro:'pr2', desde:new Date().toISOString()});
+    save(); ui.modal = null; toast(`"${ejer(D.ej).titulo}" asignado a ${nombre(pac(D.pac))}. Ya lo ve en su portal.`); return;
+  }
+  if (kind === 'turno'){
+    const inicio = new Date(`${D.fecha}T${D.hora}:00`), dur = Number(D.dur);
+    if (inicio.getTime() < Date.now()){ ui.turnoResult = {error:'No se puede agendar un turno en el pasado.'}; render(); return; }
+    const choca = S.turnos.find(t => t.pro === D.pro && t.estado !== 'Cancelado' && new Date(t.inicio) < new Date(inicio.getTime() + dur * MIN) && new Date(new Date(t.inicio).getTime() + t.dur * MIN) > inicio);
+    if (choca){ ui.turnoResult = {error:`${proNombre(pro(D.pro))} ya tiene un turno a las ${fmtHora(new Date(choca.inicio))} con ${nombre(pac(choca.pac))}. Elegí otro horario.`}; render(); return; }
+    ui.turnoResult = {loading:true}; render();
+    setTimeout(() => {
+      const t = {id:uid(), pac:D.pac, pro:D.pro, inicio:inicio.toISOString(), dur, mod:D.mod, estado:'Confirmado', motivo:D.motivo || 'Consulta', meet: D.mod === 'Virtual' ? meetCode() : null};
+      S.turnos.push(t); save(); ui.turnoResult = {turno:t}; render();
+    }, 900);
+    return;
+  }
+  if (kind === 'paciente'){
+    S.pacientes.push({id:uid(), nombre:D.nombre, apellido:D.apellido, dni:D.dni, nac:D.nac, sexo:'', email:D.email, tel:D.tel, os:D.os || 'Particular', afil:D.afil || '', dx:D.dx, o2:false, portal:'Invitación enviada'});
+    save(); ui.modal = null; toast(`${D.nombre} ${D.apellido} dado de alta. Invitación enviada a ${D.email}.`); return;
+  }
+  if (kind === 'ejercicio'){
+    S.ejercicios.push({id:uid(), titulo:D.titulo, cat:D.cat, nivel:D.nivel, dur:num(D.dur) * 60, pat:'labios', contra:D.contra || '', pasos:D.pasos.split('\n').map(s => s.trim()).filter(Boolean)});
+    save(); ui.modal = null; toast(`"${D.titulo}" agregado a la biblioteca`); return;
+  }
+});
+
+// Mantiene al día el estado del botón de videollamada sin interrumpir formularios.
+setInterval(() => {
+  const busy = ui.modal || (document.activeElement && /INPUT|TEXTAREA|SELECT/.test(document.activeElement.tagName));
+  if (!busy) render();
+}, 20000);
+
+render();
+</script>
+</body>
+</html>
